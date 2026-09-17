@@ -112,15 +112,6 @@ function buildInstallerUrl(baseUrl, repo, path, theme) {
   return url.toString();
 }
 
-// The badge generator lives on the landing page, but generated badges always
-// link to the dedicated install page.
-function buildInstallPageRedirectUrl(currentHref) {
-  const current = new URL(currentHref);
-  const target = new URL("install.html", current);
-  target.search = current.search;
-  return target.toString();
-}
-
 function applyTheme(theme) {
   const normalized = normalizeTheme(theme);
   if (typeof document !== "undefined" && document.documentElement) {
@@ -977,16 +968,6 @@ function init() {
   const repo = normalizeRepo(params.get("repo"));
   const path = normalizePath(params.get("path"));
 
-  // Backward compatibility: badges generated before the landing page and
-  // install page were split point at the landing page with a `repo` query
-  // parameter. Send those visitors to the dedicated install page instead.
-  const isLandingPage =
-    !document.getElementById("install-card") && document.getElementById("generator-form");
-  if (isLandingPage && repo) {
-    window.location.replace(buildInstallPageRedirectUrl(window.location.href));
-    return;
-  }
-
   const theme = applyTheme(params.get("theme"));
   initThemeToggle(theme);
 
@@ -1018,7 +999,6 @@ if (typeof module !== "undefined" && module.exports) {
     normalizeTheme,
     applyTheme,
     buildInstallerUrl,
-    buildInstallPageRedirectUrl,
     buildBadgeMarkdown,
     trackException,
     copyToClipboard,
