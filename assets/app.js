@@ -22,8 +22,20 @@ function normalizePath(rawPath) {
 }
 
 function track(name, properties) {
-  if (window.siteTelemetry) {
+  if (typeof window !== "undefined" && window.siteTelemetry) {
     window.siteTelemetry.trackEvent(name, properties);
+  }
+}
+
+// Custom metric so plugin installs can be counted and split per repository in
+// Application Insights.
+function trackPluginInstall(repo, properties) {
+  if (typeof window !== "undefined" && window.siteTelemetry) {
+    window.siteTelemetry.trackMetric(
+      "PluginInstalls",
+      1,
+      Object.assign({ repository: repo }, properties || {})
+    );
   }
 }
 
@@ -184,6 +196,7 @@ function renderInstallCard(repo, path) {
   copyBtn.addEventListener("click", () => {
     copyToClipboard(repo).then(() => showToast("Repository copied to clipboard"));
     track("PluginRepositoryCopied", { repository: repo, hasPath: Boolean(path) });
+    trackPluginInstall(repo, { hasPath: Boolean(path), step: "repository-copied" });
   });
 
   portalLink.addEventListener("click", () => {

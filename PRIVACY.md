@@ -33,6 +33,8 @@ Only after consent, and only these fields:
   `BadgeGenerationFailed`, `PluginRepositoryCopied`, `AzureSreAgentOpened`.
 * The public GitHub repository (`owner/repo`) of the plugin being installed and
   whether a sub-path was used.
+* A `PluginInstalls` custom metric, with that public repository name as a
+  dimension, so installs can be counted per plugin.
 * Standard Application Insights ingestion metadata (timestamp, browser user
   agent, and a coarse, city-level location derived from your IP address). IP
   masking is left at its Azure default, so the IP address is used to derive that

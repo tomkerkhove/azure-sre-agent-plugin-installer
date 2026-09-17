@@ -199,6 +199,12 @@
     return configured() && consent === "granted";
   }
 
+  function envelopeSuffix(baseType) {
+    if (baseType === "PageviewData") return "Pageview";
+    if (baseType === "MetricData") return "Metric";
+    return "Event";
+  }
+
   function send(baseType, baseData) {
     if (!enabled()) return;
 
@@ -211,7 +217,7 @@
         "Microsoft.ApplicationInsights." +
         endpoint.instrumentationKey.replace(/-/g, "") +
         "." +
-        (baseType === "PageviewData" ? "Pageview" : "Event"),
+        envelopeSuffix(baseType),
       time: new Date().toISOString(),
       iKey: endpoint.instrumentationKey,
       tags: {
@@ -255,6 +261,25 @@
     send("EventData", {
       ver: 2,
       name: String(name).slice(0, MAX_PROPERTY_LENGTH),
+      properties: sanitizeProperties(properties),
+    });
+  }
+
+  // Custom metric, reported as a single measurement with dimensions so that it
+  // can be split per plugin in Application Insights.
+  function trackMetric(name, value, properties) {
+    if (!name) return;
+    var numericValue = Number(value);
+    if (!isFinite(numericValue)) return;
+    send("MetricData", {
+      ver: 2,
+      metrics: [
+        {
+          name: String(name).slice(0, MAX_PROPERTY_LENGTH),
+          kind: 0,
+          value: numericValue,
+        },
+      ],
       properties: sanitizeProperties(properties),
     });
   }
@@ -377,6 +402,7 @@
 
   window.siteTelemetry = {
     trackEvent: trackEvent,
+    trackMetric: trackMetric,
     trackPageView: requestPageView,
     isEnabled: enabled,
     isConfigured: configured,

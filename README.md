@@ -49,6 +49,9 @@ The site can report pseudonymous usage analytics (page views, generated badges a
 which plugin repositories are installed) to Azure Application Insights, so that
 adoption and scenarios can be understood.
 
+* Installs are also counted through a `PluginInstalls` custom metric, which
+  carries the public plugin repository (`owner/repo`) as a dimension so adoption
+  can be split per plugin in Application Insights.
 * Telemetry is **opt-in**: visitors are asked for consent and nothing is sent
   until they agree. See [`PRIVACY.md`](./PRIVACY.md) for exactly what is
   collected.
