@@ -5,14 +5,24 @@ accounts and no login. To understand adoption (how many people use the site,
 which scenarios they use and which plugins get installed) it can send anonymous
 usage analytics to [Azure Application Insights](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview).
 
-## Consent first
+## Regional consent
 
-* Analytics are **off by default**. Nothing is sent until you press
-  **Allow analytics** in the banner.
+* For visitors with a European browser time zone, analytics are **off by
+  default**. Nothing is sent until you press **Allow analytics** in the banner.
+* Outside Europe, analytics start without showing the banner.
+* If the browser time zone is unavailable or does not identify a region,
+  analytics remain off and the site asks for consent.
 * Choosing **Decline** stops all telemetry; the choice is remembered in
   `localStorage` (a strictly functional, first-party entry, not a cookie).
 * You can change your choice at any time through **Change privacy choice** in
   the page footer.
+
+The site determines whether to ask from the IANA time zone reported by the
+browser. This happens locally: the site does not make an IP geolocation request
+or share data with another service to determine the region. Time zones are only
+an approximation of location and can be affected by device settings or travel.
+To avoid collecting before consent when the result is unclear, UTC,
+fixed-offset, missing and unreadable time zones are treated as European.
 
 ## No cookies
 
@@ -26,7 +36,7 @@ social media widgets. Two first-party browser storage entries are used:
 
 ## What is collected
 
-Only after consent, and only these fields:
+When analytics are enabled, only these fields are collected:
 
 * A page view with the scenario (`plugin-install` or `badge-generator`).
 * Events describing what happened: `BadgeGenerated`, `BadgeMarkdownCopied`,

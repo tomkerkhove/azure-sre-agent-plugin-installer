@@ -36,6 +36,19 @@ function loadTelemetry(connectionString, options = {}) {
     Number,
     isFinite,
     Date,
+    Intl: {
+      DateTimeFormat: () => ({
+        resolvedOptions: () => {
+          if (options.timeZoneError) {
+            throw new Error("Time zone unavailable");
+          }
+          return {
+            timeZone:
+              options.timeZone === undefined ? "Europe/Brussels" : options.timeZone,
+          };
+        },
+      }),
+    },
     JSON,
     Object,
     String,
@@ -212,6 +225,61 @@ describe("consent gating", () => {
     telemetry.setConsent(true);
     expect(requests).toHaveLength(1);
     expect(envelopes()[0].data.baseType).toBe("PageviewData");
+  });
+});
+
+describe("regional consent", () => {
+  test("automatically enables analytics outside Europe", () => {
+    const { telemetry, requests, localStorage } = loadTelemetry(
+      VALID_CONNECTION_STRING,
+      { timeZone: "America/New_York" }
+    );
+
+    telemetry.trackEvent("BadgeGenerated");
+
+    expect(telemetry.isEnabled()).toBe(true);
+    expect(requests).toHaveLength(1);
+    expect(localStorage.getItem("sre-agent-plugin-installer.analytics-consent")).toBeNull();
+  });
+
+  test("requires consent for European time zones", () => {
+    const { telemetry, requests } = loadTelemetry(VALID_CONNECTION_STRING, {
+      timeZone: "Europe/Brussels",
+    });
+
+    telemetry.trackEvent("BadgeGenerated");
+
+    expect(telemetry.isEnabled()).toBe(false);
+    expect(requests).toHaveLength(0);
+  });
+
+  test("requires consent when the time zone does not identify a region", () => {
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      timeZone: "UTC",
+    });
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
+  test("requires consent when time zone detection fails", () => {
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      timeZoneError: true,
+    });
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
+  test("preserves an explicit decline outside Europe", () => {
+    const localStorage = createStorage();
+    localStorage.setItem(
+      "sre-agent-plugin-installer.analytics-consent",
+      JSON.stringify({ version: 1, granted: false })
+    );
+
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      timeZone: "America/New_York",
+    });
+
+    expect(telemetry.isEnabled()).toBe(false);
   });
 });
 

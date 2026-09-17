@@ -1,7 +1,8 @@
-// Cookieless, consent-gated Azure Application Insights telemetry.
+// Cookieless, region-aware Azure Application Insights telemetry.
 //
 // Design goals (see PRIVACY.md):
-//   * No telemetry at all until the visitor explicitly opts in.
+//   * Ask for consent in Europe and whenever the visitor's region is unclear.
+//   * Enable analytics elsewhere while preserving explicit privacy choices.
 //   * No cookies, no fingerprinting, no personal data and no free-text input.
 //   * No third-party script: events are posted directly to the Application
 //     Insights ingestion REST API so the page can keep a strict CSP.
@@ -17,6 +18,17 @@
   var CONSENT_VERSION = 1;
   var MAX_PROPERTIES = 12;
   var MAX_PROPERTY_LENGTH = 256;
+  var EUROPEAN_TIME_ZONES = {
+    "Africa/Ceuta": true,
+    "Arctic/Longyearbyen": true,
+    "Asia/Famagusta": true,
+    "Asia/Nicosia": true,
+    "Atlantic/Azores": true,
+    "Atlantic/Canary": true,
+    "Atlantic/Faroe": true,
+    "Atlantic/Madeira": true,
+    "Atlantic/Reykjavik": true,
+  };
 
   // Application Insights ingestion is only accepted on these Azure Monitor
   // domains. Validating this guards against a misconfigured or tampered
@@ -185,10 +197,37 @@
     return result;
   }
 
+  function requiresConsent() {
+    try {
+      var timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (typeof timeZone !== "string" || !timeZone) return true;
+
+      // UTC and fixed-offset zones do not identify where the visitor is based,
+      // so use the privacy-preserving fallback and ask for consent.
+      if (
+        timeZone === "UTC" ||
+        timeZone === "GMT" ||
+        timeZone.indexOf("Etc/") === 0
+      ) {
+        return true;
+      }
+
+      return (
+        timeZone.indexOf("Europe/") === 0 ||
+        EUROPEAN_TIME_ZONES[timeZone] === true
+      );
+    } catch (error) {
+      return true;
+    }
+  }
+
   var config = (window.SITE_CONFIG && window.SITE_CONFIG.telemetry) || {};
   var endpoint = parseConnectionString(config.connectionString);
   var cloudRole = config.cloudRole || "sre-agent-plugin-installer";
   var consent = readConsent();
+  if (consent === null && !requiresConsent()) {
+    consent = "granted";
+  }
   var operationId = "";
 
   function configured() {

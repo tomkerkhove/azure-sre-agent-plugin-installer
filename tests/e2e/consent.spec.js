@@ -7,7 +7,11 @@ const CONNECTION_STRING =
 
 // The deployed site only enables analytics when the Pages workflow injects the
 // ingestion connection string, so it is stubbed here before any script runs.
-async function enableTelemetry(page, ingestionRequests) {
+async function enableTelemetry(
+  page,
+  ingestionRequests,
+  timeZone = "Europe/Brussels"
+) {
   // Stand in for the config.js that the Pages workflow generates from the
   // repository secret.
   await page.route("**/assets/config.js", async (route) => {
@@ -28,9 +32,15 @@ async function enableTelemetry(page, ingestionRequests) {
 
   // sendBeacon would bypass Playwright's request interception, so force the
   // fetch transport for these tests.
-  await page.addInitScript(() => {
+  await page.addInitScript((browserTimeZone) => {
+    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+    Intl.DateTimeFormat.prototype.resolvedOptions = function () {
+      return Object.assign({}, resolvedOptions.call(this), {
+        timeZone: browserTimeZone,
+      });
+    };
     window.navigator.sendBeacon = undefined;
-  });
+  }, timeZone);
 
   await page.route(`${INGESTION_HOST}/**`, async (route) => {
     ingestionRequests.push(JSON.parse(route.request().postData() || "[]"));
@@ -68,6 +78,26 @@ test.describe("Privacy consent", () => {
     await page.locator("#copy-repo-btn").click();
     await page.waitForTimeout(250);
     expect(ingestionRequests).toHaveLength(0);
+  });
+
+  test("collects without prompting visitors outside Europe", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests, "America/New_York");
+
+    await page.goto("/?repo=owner/repo");
+
+    await expect(page.locator("#consent-banner")).toBeHidden();
+    await expect(page.locator("#consent-status")).toHaveText(
+      "Anonymous analytics: on."
+    );
+    await expect
+      .poll(() => envelopes(ingestionRequests).length, { timeout: 5000 })
+      .toBeGreaterThan(0);
+    expect(
+      await page.evaluate(() =>
+        localStorage.getItem("sre-agent-plugin-installer.analytics-consent")
+      )
+    ).toBeNull();
   });
 
   test("sets no cookies", async ({ page, context }) => {
