@@ -2,6 +2,7 @@ const {
   normalizeRepo,
   normalizeTheme,
   buildInstallerUrl,
+  buildInstallPageRedirectUrl,
   buildBadgeMarkdown,
   trackException,
 } = require("../../assets/app.js");
@@ -77,6 +78,38 @@ describe("buildInstallerUrl", () => {
   test("omits the theme query parameter for an unsupported theme", () => {
     const url = buildInstallerUrl("https://example.com/", "owner/repo", "", "neon");
     expect(url).toBe("https://example.com/?repo=owner%2Frepo");
+  });
+});
+
+describe("buildInstallPageRedirectUrl", () => {
+  test("points at install.html alongside the landing page", () => {
+    const url = buildInstallPageRedirectUrl(
+      "https://example.com/?repo=owner%2Frepo"
+    );
+    expect(url).toBe("https://example.com/install.html?repo=owner%2Frepo");
+  });
+
+  test("preserves the theme and path query parameters", () => {
+    const url = buildInstallPageRedirectUrl(
+      "https://example.com/?repo=owner%2Frepo&path=plugins%2Fmy-plugin&theme=dark"
+    );
+    expect(url).toBe(
+      "https://example.com/install.html?repo=owner%2Frepo&path=plugins%2Fmy-plugin&theme=dark"
+    );
+  });
+
+  test("resolves relative to a subpath deployment", () => {
+    const url = buildInstallPageRedirectUrl(
+      "https://example.com/azure-sre-agent-plugin-installer/?repo=owner%2Frepo"
+    );
+    expect(url).toBe(
+      "https://example.com/azure-sre-agent-plugin-installer/install.html?repo=owner%2Frepo"
+    );
+  });
+
+  test("drops any query parameters when there are none to preserve", () => {
+    const url = buildInstallPageRedirectUrl("https://example.com/");
+    expect(url).toBe("https://example.com/install.html");
   });
 });
 
