@@ -84,6 +84,10 @@ npm install
   npm run test:e2e
   ```
 
+Every behavior change - by humans or AI agents - must come with tests. See
+[`AGENTS.md`](./AGENTS.md) for the guidelines that agents contributing to this
+repository must follow.
+
 > **Note:** This project is not affiliated with or endorsed by Microsoft. It
 > only links to the official Azure SRE Agent portal and documentation to help
 > visitors complete the install themselves.
