@@ -130,6 +130,47 @@ test.describe("Privacy consent", () => {
     expect(metric.data.baseData.properties.repository).toBe("owner/repo");
   });
 
+  test("reports error categories without exception details", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+
+    await page.goto("/");
+    await page.locator("#consent-accept").click();
+    await page.evaluate(() => {
+      const error = new TypeError("token=private-value");
+      error.stack = "private stack trace";
+      window.dispatchEvent(
+        new ErrorEvent("error", {
+          error,
+          message: error.message,
+        })
+      );
+    });
+
+    await expect
+      .poll(
+        () =>
+          envelopes(ingestionRequests).filter(
+            (envelope) => envelope.data.baseType === "ExceptionData"
+          ).length,
+        { timeout: 5000 }
+      )
+      .toBe(1);
+
+    const exception = envelopes(ingestionRequests).find(
+      (envelope) => envelope.data.baseType === "ExceptionData"
+    );
+    expect(exception.data.baseData.exceptions[0]).toEqual({
+      id: 1,
+      typeName: "TypeError",
+      message: "An application exception occurred.",
+      hasFullStack: false,
+    });
+    expect(exception.data.baseData.properties.source).toBe("window-error");
+    expect(JSON.stringify(exception)).not.toContain("private-value");
+    expect(JSON.stringify(exception)).not.toContain("private stack trace");
+  });
+
   test("collects nothing when the visitor declines", async ({ page }) => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);

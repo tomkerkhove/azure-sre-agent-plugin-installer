@@ -17,6 +17,17 @@
   var CONSENT_VERSION = 1;
   var MAX_PROPERTIES = 12;
   var MAX_PROPERTY_LENGTH = 256;
+  var SAFE_EXCEPTION_TYPES = [
+    "Error",
+    "EvalError",
+    "RangeError",
+    "ReferenceError",
+    "SyntaxError",
+    "TypeError",
+    "URIError",
+    "AggregateError",
+    "ApiError",
+  ];
 
   // Application Insights ingestion is only accepted on these Azure Monitor
   // domains. Validating this guards against a misconfigured or tampered
@@ -202,6 +213,7 @@
   function envelopeSuffix(baseType) {
     if (baseType === "PageviewData") return "Pageview";
     if (baseType === "MetricData") return "Metric";
+    if (baseType === "ExceptionData") return "Exception";
     return "Event";
   }
 
@@ -261,6 +273,31 @@
     send("EventData", {
       ver: 2,
       name: String(name).slice(0, MAX_PROPERTY_LENGTH),
+      properties: sanitizeProperties(properties),
+    });
+  }
+
+  function exceptionType(exception) {
+    var name =
+      exception && typeof exception === "object" && typeof exception.name === "string"
+        ? exception.name
+        : "Error";
+    return SAFE_EXCEPTION_TYPES.indexOf(name) !== -1 ? name : "Error";
+  }
+
+  function trackException(exception, properties) {
+    var typeName = exceptionType(exception);
+    send("ExceptionData", {
+      ver: 2,
+      exceptions: [
+        {
+          id: 1,
+          typeName: typeName,
+          message: "An application exception occurred.",
+          hasFullStack: false,
+        },
+      ],
+      severityLevel: 3,
       properties: sanitizeProperties(properties),
     });
   }
@@ -400,8 +437,26 @@
     renderConsentUi();
   }
 
+  function initExceptionTracking() {
+    if (typeof window.addEventListener !== "function") return;
+
+    window.addEventListener("error", function (event) {
+      trackException(event && event.error, {
+        handled: false,
+        source: "window-error",
+      });
+    });
+    window.addEventListener("unhandledrejection", function (event) {
+      trackException(event && event.reason, {
+        handled: false,
+        source: "unhandled-rejection",
+      });
+    });
+  }
+
   window.siteTelemetry = {
     trackEvent: trackEvent,
+    trackException: trackException,
     trackMetric: trackMetric,
     trackPageView: requestPageView,
     isEnabled: enabled,
@@ -409,5 +464,6 @@
     setConsent: setConsent,
   };
 
+  initExceptionTracking();
   document.addEventListener("DOMContentLoaded", initConsentUi);
 })();

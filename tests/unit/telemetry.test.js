@@ -52,6 +52,9 @@ function loadTelemetry(connectionString, options = {}) {
       return Promise.resolve();
     },
     navigator: {},
+    addEventListener: (name, handler) => {
+      listeners[name] = handler;
+    },
     document: {
       title: "Install to Azure SRE Agent",
       addEventListener: (name, handler) => {
@@ -76,6 +79,7 @@ function loadTelemetry(connectionString, options = {}) {
     requests,
     localStorage,
     sessionStorage,
+    listeners,
     envelopes: () => requests.map((request) => JSON.parse(request.body)[0]),
   };
 }
@@ -143,6 +147,7 @@ describe("consent gating", () => {
   test("sends nothing before consent is given", () => {
     const { telemetry, requests } = loadTelemetry(VALID_CONNECTION_STRING);
     telemetry.trackEvent("BadgeGenerated");
+    telemetry.trackException(new Error("private error details"));
     telemetry.trackPageView({ scenario: "badge-generator" });
     telemetry.trackMetric("PluginInstalls", 1, { repository: "owner/repo" });
     expect(telemetry.isEnabled()).toBe(false);
@@ -212,6 +217,62 @@ describe("consent gating", () => {
     telemetry.setConsent(true);
     expect(requests).toHaveLength(1);
     expect(envelopes()[0].data.baseType).toBe("PageviewData");
+  });
+});
+
+describe("exception telemetry", () => {
+  test("sends an Application Insights exception without messages or stack traces", () => {
+    const { telemetry, requests, envelopes } = loadTelemetry(VALID_CONNECTION_STRING);
+    const error = new TypeError("token=private-value");
+    error.stack = "private stack trace";
+
+    telemetry.setConsent(true);
+    telemetry.trackException(error, { handled: true, operation: "install-plugin" });
+
+    const envelope = envelopes()[0];
+    expect(envelope.name).toBe(
+      "Microsoft.ApplicationInsights.11111111222233334444555555555555.Exception"
+    );
+    expect(envelope.data.baseType).toBe("ExceptionData");
+    expect(envelope.data.baseData.exceptions).toEqual([
+      {
+        id: 1,
+        typeName: "TypeError",
+        message: "An application exception occurred.",
+        hasFullStack: false,
+      },
+    ]);
+    expect(envelope.data.baseData.properties).toEqual({
+      handled: "true",
+      operation: "install-plugin",
+    });
+    expect(requests[0].body).not.toContain("private-value");
+    expect(requests[0].body).not.toContain("private stack trace");
+  });
+
+  test("normalizes custom exception names rather than sending arbitrary text", () => {
+    const { telemetry, envelopes } = loadTelemetry(VALID_CONNECTION_STRING);
+    telemetry.setConsent(true);
+    telemetry.trackException({ name: "CustomerAccount123", message: "private" });
+
+    expect(envelopes()[0].data.baseData.exceptions[0].typeName).toBe("Error");
+  });
+
+  test("captures unhandled errors and promise rejections after consent", () => {
+    const { telemetry, listeners, envelopes } = loadTelemetry(VALID_CONNECTION_STRING);
+    telemetry.setConsent(true);
+
+    listeners.error({ error: new ReferenceError("private error") });
+    listeners.unhandledrejection({ reason: new RangeError("private rejection") });
+
+    expect(envelopes()).toHaveLength(2);
+    expect(envelopes()[0].data.baseData.exceptions[0].typeName).toBe("ReferenceError");
+    expect(envelopes()[0].data.baseData.properties).toEqual({
+      handled: "false",
+      source: "window-error",
+    });
+    expect(envelopes()[1].data.baseData.exceptions[0].typeName).toBe("RangeError");
+    expect(envelopes()[1].data.baseData.properties.source).toBe("unhandled-rejection");
   });
 });
 

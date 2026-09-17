@@ -3,6 +3,7 @@ const {
   normalizeTheme,
   buildInstallerUrl,
   buildBadgeMarkdown,
+  trackException,
 } = require("../../assets/app.js");
 
 describe("normalizeRepo", () => {
@@ -106,5 +107,29 @@ describe("buildBadgeMarkdown", () => {
     const markdown = buildBadgeMarkdown("https://example.com/?repo=owner%2Frepo");
     expect(markdown).toContain("[![Install to Azure SRE Agent]");
     expect(markdown).toContain("(https://example.com/?repo=owner%2Frepo)");
+  });
+
+  describe("trackException", () => {
+    afterEach(() => {
+      delete global.window;
+    });
+
+    test("adds a numeric API status to handled exception telemetry", () => {
+      const report = jest.fn();
+      global.window = { siteTelemetry: { trackException: report } };
+      const error = Object.assign(new Error("private"), { status: 503 });
+
+      trackException(error, { handled: true, operation: "list-agents" });
+
+      expect(report).toHaveBeenCalledWith(error, {
+        handled: true,
+        operation: "list-agents",
+        status: 503,
+      });
+    });
+
+    test("does nothing when telemetry is unavailable", () => {
+      expect(() => trackException(new Error("test"))).not.toThrow();
+    });
   });
 });
