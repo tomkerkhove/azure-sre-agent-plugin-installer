@@ -19,6 +19,17 @@ Every change to behavior **must** be covered by automated tests:
 Documentation-only changes (for example README or this file) do not require
 new tests.
 
+## Always resolve pull request conflicts
+
+Before finalizing or publishing a pull request:
+
+* Fetch and merge the latest base branch into the working branch.
+* Resolve every conflict while preserving the intended changes from both
+  branches.
+* Re-run the required tests after the merge.
+* Verify that GitHub no longer reports the pull request as conflicting. Do not
+  report the work as complete while conflicts remain.
+
 ## Always run the tests
 
 Before finishing a change, run:

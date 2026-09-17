@@ -553,12 +553,17 @@ function copyToClipboard(text) {
   document.body.appendChild(textarea);
   textarea.focus();
   textarea.select();
+  let copied = false;
   try {
-    document.execCommand("copy");
+    copied = document.execCommand("copy");
+  } catch (error) {
+    return Promise.reject(error);
   } finally {
     document.body.removeChild(textarea);
   }
-  return Promise.resolve();
+  return copied
+    ? Promise.resolve()
+    : Promise.reject(new Error("Clipboard copy failed"));
 }
 
 function initOnlineInstaller(repo, path) {
@@ -878,17 +883,21 @@ function renderInstallCard(repo, path) {
 
   copyImportBtn.addEventListener("click", () => {
     if (!importCommand) return;
-    copyToClipboard(importCommand).then(() =>
-      showToast("Import command copied to clipboard")
-    );
+    copyToClipboard(importCommand)
+      .then(() => showToast("Import command copied to clipboard"))
+      .catch(() => {});
   });
 
   const copyBtn = document.getElementById("copy-repo-btn");
   const portalLink = container.querySelector(`a[href="${SRE_AGENT_PORTAL_URL}"]`);
   copyBtn.addEventListener("click", () => {
-    copyToClipboard(repo).then(() => showToast("Repository copied to clipboard"));
-    track("PluginRepositoryCopied", { repository: repo, hasPath: Boolean(path) });
-    trackPluginInstall(repo, { hasPath: Boolean(path), step: "repository-copied" });
+    copyToClipboard(repo)
+      .then(() => {
+        showToast("Repository copied to clipboard");
+        track("PluginRepositoryCopied", { repository: repo, hasPath: Boolean(path) });
+        trackPluginInstall(repo, { hasPath: Boolean(path), step: "repository-copied" });
+      })
+      .catch(() => {});
   });
 
   portalLink.addEventListener("click", () => {
@@ -945,10 +954,12 @@ function initGenerator() {
 
   document.getElementById("copy-badge-btn").addEventListener("click", () => {
     if (!output.textContent) return;
-    copyToClipboard(output.textContent).then(() =>
-      showToast("Badge markdown copied to clipboard")
-    );
-    track("BadgeMarkdownCopied");
+    copyToClipboard(output.textContent)
+      .then(() => {
+        showToast("Badge markdown copied to clipboard");
+        track("BadgeMarkdownCopied");
+      })
+      .catch(() => {});
   });
 }
 
@@ -990,6 +1001,7 @@ if (typeof module !== "undefined" && module.exports) {
     buildInstallerUrl,
     buildBadgeMarkdown,
     trackException,
+    copyToClipboard,
     DEFAULT_THEME,
     SUPPORTED_THEMES,
   };

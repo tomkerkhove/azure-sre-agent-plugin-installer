@@ -9,6 +9,19 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("h1")).toHaveText("Install to Azure SRE Agent");
   });
 
+  test("loads the bundled MSAL browser library", async ({ page }) => {
+    const msalResponse = page.waitForResponse((response) =>
+      response.url().endsWith("/assets/vendor/msal-browser.min.js")
+    );
+
+    await page.goto("/");
+
+    expect((await msalResponse).status()).toBe(200);
+    expect(
+      await page.evaluate(() => typeof window.msal?.PublicClientApplication === "function")
+    ).toBe(true);
+  });
+
   test("renders the install card when a repo query parameter is provided", async ({ page }) => {
     await page.goto("/?repo=owner/repo");
 
@@ -36,6 +49,47 @@ test.describe("Install to Azure SRE Agent site", () => {
       "Install in the Azure portal",
       "Generate an Azure CLI command",
     ]);
+  });
+
+  test("generates an Azure CLI import command", async ({ page }) => {
+    await page.goto("/?repo=owner/repo&path=plugins/my-plugin");
+
+    await page.locator("#agent-endpoint").fill(
+      "https://demo.hash.eastus.azuresre.ai"
+    );
+    await page.locator("#api-import-form button[type=submit]").click();
+
+    const output = page.locator("#import-output");
+    await expect(output).toBeVisible();
+    await expect(output).toContainText(
+      "--url 'https://demo.hash.eastus.azuresre.ai/api/v2/plugins/install-direct'"
+    );
+    await expect(output).toContainText(
+      `--data '{"sourceUrl":"owner/repo","pathInRepo":"plugins/my-plugin"}'`
+    );
+    await expect(page.locator("#copy-import-btn")).toBeEnabled();
+  });
+
+  test("rejects an invalid Azure SRE Agent endpoint", async ({ page }) => {
+    await page.goto("/?repo=owner/repo");
+
+    const endpointInput = page.locator("#agent-endpoint");
+    const submitButton = page.locator(
+      "#api-import-form button[type=submit]"
+    );
+    const copyButton = page.locator("#copy-import-btn");
+
+    await endpointInput.fill("https://demo.hash.eastus.azuresre.ai");
+    await submitButton.click();
+    await expect(copyButton).toBeEnabled();
+
+    await endpointInput.fill("https://demo.azuresre.ai.attacker.example");
+    await submitButton.click();
+
+    await expect(page.locator("#import-output")).toHaveText(
+      "Enter a valid Azure SRE Agent endpoint ending in .azuresre.ai."
+    );
+    await expect(copyButton).toBeDisabled();
   });
 
   test("shows the path in repository when the path query parameter is provided", async ({ page }) => {
