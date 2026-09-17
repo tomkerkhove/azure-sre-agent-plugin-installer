@@ -1,5 +1,5 @@
 {
-  "name": "tomkerkhove-azure-sre-agent-plugin-installer",
+  "name": "azure-sre-agent-plugin-installer",
   "version": "1.0.0",
   "private": true,
   "description": "Static site that helps plugin authors add an 'Install to Azure SRE Agent' badge to their README.",
