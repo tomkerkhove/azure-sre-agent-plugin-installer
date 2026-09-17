@@ -43,20 +43,55 @@ test("validates Azure SRE Agent data plane endpoints", () => {
     ),
     "https://agent.hash.eastus.azuresre.ai"
   );
-  assert.equal(
-    vm.runInContext(
-      "normalizeAgentEndpoint('https://agent.hash.eastus.azuresre.ai/other')",
-      context
-    ),
-    null
+
+  for (const endpoint of [
+    "http://agent.hash.eastus.azuresre.ai/",
+    "https://username@agent.hash.eastus.azuresre.ai/",
+    "https://agent.hash.eastus.azuresre.ai:8443/",
+    "https://agent.hash.eastus.azuresre.ai/other",
+    "https://agent.hash.eastus.azuresre.ai/?query=value",
+    "https://agent.hash.eastus.azuresre.ai/#fragment",
+    "https://agent.hash.eastus.azuresre.ai.attacker.example/",
+    "https://agent.example.com/",
+    "not-a-url",
+  ]) {
+    assert.equal(
+      vm.runInContext(
+        `normalizeAgentEndpoint(${JSON.stringify(endpoint)})`,
+        context
+      ),
+      null,
+      endpoint
+    );
+  }
+});
+
+test("builds an import command with safely quoted JSON", () => {
+  const importPath = `plugins/team's "plugin"`;
+  const context = createContext({
+    importEndpoint: "https://demo.hash.eastus.azuresre.ai",
+    importRepo: "owner/plugin",
+    importPath,
+  });
+
+  const command = vm.runInContext(
+    "buildImportCommand(importEndpoint, importRepo, importPath)",
+    context
   );
-  assert.equal(
-    vm.runInContext(
-      "normalizeAgentEndpoint('https://agent.example.com/')",
-      context
-    ),
-    null
+  const requestBody = JSON.stringify({
+    sourceUrl: "owner/plugin",
+    pathInRepo: importPath,
+  });
+  const shellQuotedBody =
+    "'" + requestBody.replace(/'/g, "'\"'\"'") + "'";
+
+  assert.match(command, /^TOKEN=\$\(az account get-access-token \\\n/);
+  assert.match(
+    command,
+    /--url 'https:\/\/demo\.hash\.eastus\.azuresre\.ai\/api\/v2\/plugins\/install-direct' \\\n/
   );
+  assert.match(command, /--oauth2-bearer "\$TOKEN" \\\n/);
+  assert.ok(command.endsWith(`--data ${shellQuotedBody}`));
 });
 
 test("configures MSAL with memory-only caching", async () => {
