@@ -90,6 +90,7 @@ test("builds an import command with safely quoted JSON", () => {
     command,
     /--url 'https:\/\/demo\.hash\.eastus\.azuresre\.ai\/api\/v2\/plugins\/install-direct' \\\n/
   );
+  assert.match(command, /--oauth2-bearer "\$TOKEN" \\\n/);
   assert.ok(command.endsWith(`--data ${shellQuotedBody}`));
 });
 
