@@ -19,6 +19,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Ensure GitHub Pages does not process the site with Jekyll
+        if: github.event.action != 'closed'
+        run: mkdir -p /tmp/nojekyll-marker
+
+      - name: Disable Jekyll processing on the gh-pages branch
+        if: github.event.action != 'closed'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/nojekyll-marker
+          keep_files: true
+
       - name: Deploy or remove PR preview
         uses: rossjrw/pr-preview-action@v1
         with:
