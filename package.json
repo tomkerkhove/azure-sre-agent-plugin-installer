@@ -6,6 +6,7 @@
   "scripts": {
     "build": "mkdir -p assets/vendor && cp node_modules/@azure/msal-browser/lib/msal-browser.min.js assets/vendor/msal-browser.min.js",
     "test": "jest",
+    "pretest:e2e": "npm run build",
     "test:e2e": "playwright test",
     "serve": "node scripts/serve.js"
   },
