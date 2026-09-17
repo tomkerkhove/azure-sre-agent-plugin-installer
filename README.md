@@ -41,7 +41,7 @@ Markdown snippet for your repository without crafting the URL by hand.
   page load and renders installation instructions accordingly - no backend or
   build step is required.
 * [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml)
-  publishes the site to GitHub Pages on every push to `main`.
+  publishes the site to GitHub Pages on every push to `main` or on demand.
 
 > **Note:** This project is not affiliated with or endorsed by Microsoft. It
 > only links to the official Azure SRE Agent portal and documentation to help
