@@ -28,7 +28,6 @@ jobs:
         if: github.event.action == 'closed'
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
 
       - name: Deploy or remove PR preview

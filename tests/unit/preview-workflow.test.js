@@ -20,9 +20,9 @@ describe("PR preview workflow", () => {
     );
   });
 
-  test("checks out the trusted base revision before cleanup", () => {
+  test("uses the trusted default checkout before cleanup", () => {
     expect(workflow).toMatch(
-      /if: github\.event\.action == 'closed'[\s\S]*ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}[\s\S]*persist-credentials: false/
+      /name: Checkout base for cleanup\s+if: github\.event\.action == 'closed'\s+uses: actions\/checkout@v7\s+with:\s+persist-credentials: false/
     );
   });
 
