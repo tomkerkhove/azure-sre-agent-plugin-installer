@@ -43,6 +43,16 @@ Markdown snippet for your repository without crafting the URL by hand.
 * [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml)
   publishes the site to GitHub Pages on every push to `main` or on demand.
 
+## PR previews
+
+[`.github/workflows/pr-preview.yml`](./.github/workflows/pr-preview.yml)
+automatically deploys a preview of the site for every pull request, so
+changes can be reviewed and tested live before merging. The workflow posts a
+comment on the pull request with a link to the preview
+(`https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/pr-preview/pr-<number>/`)
+and updates it whenever new commits are pushed. The preview is removed
+automatically when the pull request is closed.
+
 ## Testing
 
 The site's logic and UI are covered by automated tests, run in CI via
