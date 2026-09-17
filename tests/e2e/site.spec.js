@@ -1,5 +1,38 @@
 const { test, expect } = require("@playwright/test");
 
+async function configureOnlineInstaller(page, clientMethods) {
+  await page.route("**/assets/config.js", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/javascript",
+      body: `
+        window.SRE_AGENT_INSTALLER_CONFIG = Object.freeze({
+          clientId: "11111111-1111-4111-8111-111111111111",
+          tenantId: "organizations",
+          dataPlaneScope: "https://azuresre.dev/.default"
+        });
+        window.SITE_CONFIG = { telemetry: { connectionString: "" } };
+      `,
+    });
+  });
+
+  await page.route("**/assets/vendor/msal-browser.min.js", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/javascript",
+      body: `
+        window.msal = {
+          InteractionRequiredAuthError: class extends Error {},
+          PublicClientApplication: class {
+            async initialize() {}
+            ${clientMethods}
+          }
+        };
+      `,
+    });
+  });
+}
+
 test.describe("Install to Azure SRE Agent site", () => {
   test("shows the empty state when no repo is specified", async ({ page }) => {
     await page.goto("/");
@@ -60,6 +93,73 @@ test.describe("Install to Azure SRE Agent site", () => {
     ]);
     await expect(page.locator("#online-install-option")).toHaveAttribute("open", "");
     await expect(page.locator("#alternative-options")).toHaveCount(0);
+  });
+
+  test("opens fallback drawers when authentication fails", async ({ page }) => {
+    await configureOnlineInstaller(
+      page,
+      `async loginPopup() {
+        throw Object.assign(new Error("Consent is required"), {
+          errorCode: "consent_required"
+        });
+      }`
+    );
+    await page.goto("/?repo=owner/repo");
+
+    await expect(page.locator("#portal-install-option")).not.toHaveAttribute("open", "");
+    await expect(page.locator("#cli-install-option")).not.toHaveAttribute("open", "");
+    await page.locator("#sign-in-btn").click();
+
+    await expect(page.locator("#online-status")).toContainText(
+      "isn't permitted to request the required Azure access"
+    );
+    await expect(page.locator("#portal-install-option")).toHaveAttribute("open", "");
+    await expect(page.locator("#cli-install-option")).toHaveAttribute("open", "");
+  });
+
+  test("opens fallback drawers when installation fails", async ({ page }) => {
+    await configureOnlineInstaller(
+      page,
+      `async loginPopup() {
+        return {
+          account: { username: "user@example.com" },
+          accessToken: "management-token"
+        };
+      }
+      async acquireTokenPopup() {
+        throw new Error("Installation token failed");
+      }`
+    );
+    await page.route("https://management.azure.com/providers/Microsoft.ResourceGraph/resources?**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: [{
+            id: "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.App/agents/demo",
+            name: "demo",
+            subscriptionId: "sub",
+            resourceGroup: "rg",
+            location: "eastus",
+            agentEndpoint: "https://demo.hash.eastus.azuresre.ai",
+            powerState: "Running"
+          }]
+        }),
+      });
+    });
+    await page.goto("/?repo=owner/repo");
+    await page.locator("#sign-in-btn").click();
+    await page.locator("#agent-select").selectOption("0");
+
+    await expect(page.locator("#portal-install-option")).not.toHaveAttribute("open", "");
+    await expect(page.locator("#cli-install-option")).not.toHaveAttribute("open", "");
+    await page.locator("#install-btn").click();
+
+    await expect(page.locator("#online-status")).toContainText(
+      "The plugin couldn't be installed"
+    );
+    await expect(page.locator("#portal-install-option")).toHaveAttribute("open", "");
+    await expect(page.locator("#cli-install-option")).toHaveAttribute("open", "");
   });
 
   test("shows the path in repository when the path query parameter is provided", async ({ page }) => {
