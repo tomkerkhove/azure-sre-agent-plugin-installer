@@ -208,3 +208,43 @@ footer {
 footer a {
   color: var(--muted);
 }
+
+.consent-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+  padding: 16px 20px;
+  z-index: 10;
+}
+
+.consent-banner[hidden] {
+  display: none;
+}
+
+.consent-banner-text {
+  max-width: 620px;
+  font-size: 0.85rem;
+}
+
+.consent-banner-text p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.consent-banner-actions {
+  display: flex;
+  gap: 8px;
+}
+
+#consent-manage a {
+  color: var(--muted);
+}
