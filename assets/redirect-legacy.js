@@ -12,20 +12,18 @@
 // here only costs an extra redirect hop, not incorrect behavior.
 //
 // Resolving the install page's filename is shared with assets/app.js via
-// assets/install-page.js, which must load before this script. This is a
-// function declaration (not const/let) so it can coexist with app.js's own
-// helper of the same kind - both scripts load on index.html and share one
-// top-level lexical scope, where only var/function bindings (not let/const)
-// can safely be repeated.
-function legacyResolveInstallPageUrl(currentHref) {
-  return typeof require === "function"
-    ? require("./install-page.js").getInstallPageUrl(currentHref)
-    : getInstallPageUrl(currentHref);
+// assets/install-page.js, which declares `getInstallPageUrl` as a global for
+// other same-page scripts to call directly (all classic <script> tags share
+// one top-level scope). In Node, requiring it here has the side effect of
+// attaching that same global so this file's own use of `getInstallPageUrl`
+// below, and its unit tests, work the same way.
+if (typeof require === "function") {
+  require("./install-page.js");
 }
 
 function buildInstallPageRedirectUrl(currentHref) {
   const current = new URL(currentHref);
-  const target = new URL(legacyResolveInstallPageUrl(current.href));
+  const target = new URL(getInstallPageUrl(current.href));
   target.search = current.search;
   return target.toString();
 }

@@ -8,15 +8,14 @@
 // Reference: https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url
 
 // Resolving the dedicated install page's URL is shared with
-// assets/redirect-legacy.js via assets/install-page.js. This is a function
-// declaration (not const/let) so it can coexist with redirect-legacy.js's
-// own helper of the same kind when both scripts load on index.html - all
-// classic <script> tags on a page share one top-level lexical scope, and
-// only var/function bindings (not let/const) can safely be repeated there.
-function appResolveInstallPageUrl(currentHref) {
-  return typeof require === "function"
-    ? require("./install-page.js").getInstallPageUrl(currentHref)
-    : getInstallPageUrl(currentHref);
+// assets/redirect-legacy.js via assets/install-page.js, which declares
+// `getInstallPageUrl` as a global for other same-page scripts to call
+// directly (all classic <script> tags share one top-level scope). In Node,
+// requiring it here has the side effect of attaching that same global so
+// this file's own use of `getInstallPageUrl` below, and its unit tests,
+// work the same way.
+if (typeof require === "function") {
+  require("./install-page.js");
 }
 
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
@@ -951,7 +950,7 @@ function initGenerator() {
     }
 
     const installerUrl = buildInstallerUrl(
-      appResolveInstallPageUrl(window.location.href),
+      getInstallPageUrl(window.location.href),
       repo,
       pathInput,
       themeInput ? themeInput.value : DEFAULT_THEME
