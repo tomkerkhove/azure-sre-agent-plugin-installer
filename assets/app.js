@@ -34,7 +34,7 @@ const DEFAULT_THEME = "light";
 const SUPPORTED_THEMES = ["light", "dark"];
 const README_REQUEST_TIMEOUT_MS = 8000;
 const README_CACHE_PREFIX = "sre-agent-plugin-installer.readme.";
-const README_CACHE_MAX_LENGTH = 500000;
+const README_MAX_LENGTH = 500000;
 const README_ALLOWED_ELEMENTS = new Set([
   "a",
   "blockquote",
@@ -214,14 +214,14 @@ function getCachedRepositoryReadme(repo) {
   try {
     if (typeof window === "undefined" || !window.sessionStorage) return null;
     const markup = window.sessionStorage.getItem(`${README_CACHE_PREFIX}${repo}`);
-    return markup && markup.length <= README_CACHE_MAX_LENGTH ? markup : null;
+    return markup && markup.length <= README_MAX_LENGTH ? markup : null;
   } catch (_error) {
     return null;
   }
 }
 
 function cacheRepositoryReadme(repo, markup) {
-  if (!markup || markup.length > README_CACHE_MAX_LENGTH) return;
+  if (!markup || markup.length > README_MAX_LENGTH) return;
 
   try {
     if (typeof window !== "undefined" && window.sessionStorage) {
@@ -229,6 +229,45 @@ function cacheRepositoryReadme(repo, markup) {
     }
   } catch (_error) {
     // Continue without caching when browser storage is unavailable or full.
+  }
+}
+
+async function readResponseTextWithLimit(response, maximumLength) {
+  const contentLength = Number(response.headers?.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > maximumLength) {
+    throw new Error("README is too large");
+  }
+
+  if (!response.body || typeof response.body.getReader !== "function") {
+    const text = await response.text();
+    if (text.length > maximumLength) throw new Error("README is too large");
+    return text;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytesRead = 0;
+  let text = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      bytesRead += value.byteLength;
+      if (bytesRead > maximumLength) {
+        await reader.cancel();
+        throw new Error("README is too large");
+      }
+
+      text += decoder.decode(value, { stream: true });
+    }
+
+    text += decoder.decode();
+    if (text.length > maximumLength) throw new Error("README is too large");
+    return text;
+  } finally {
+    reader.releaseLock();
   }
 }
 
@@ -358,10 +397,11 @@ async function loadRepositoryReadme(repo) {
     });
     if (!response.ok) throw new Error("README request failed");
 
-    const sanitizedMarkup = sanitizeRepositoryReadmeHtml(
-      await response.text(),
-      repo
+    const renderedMarkup = await readResponseTextWithLimit(
+      response,
+      README_MAX_LENGTH
     );
+    const sanitizedMarkup = sanitizeRepositoryReadmeHtml(renderedMarkup, repo);
     if (!sanitizedMarkup.trim()) throw new Error("README is empty");
 
     content.innerHTML = sanitizedMarkup;
@@ -1230,7 +1270,9 @@ if (typeof module !== "undefined" && module.exports) {
     buildRepositoryReadmeApiUrl,
     sanitizeRepositoryReadmeHtml,
     loadRepositoryReadme,
+    readResponseTextWithLimit,
     README_REQUEST_TIMEOUT_MS,
+    README_MAX_LENGTH,
     copyToClipboard,
     DEFAULT_THEME,
     SUPPORTED_THEMES,

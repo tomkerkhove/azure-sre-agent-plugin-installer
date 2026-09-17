@@ -1,12 +1,16 @@
 /** @jest-environment jsdom */
 
+const { TextDecoder } = require("node:util");
 const {
   sanitizeRepositoryReadmeHtml,
   loadRepositoryReadme,
+  readResponseTextWithLimit,
   README_REQUEST_TIMEOUT_MS,
+  README_MAX_LENGTH,
 } = require("../../assets/app.js");
 
 const originalFetch = global.fetch;
+global.TextDecoder = TextDecoder;
 
 afterEach(() => {
   global.fetch = originalFetch;
@@ -136,6 +140,7 @@ describe("loadRepositoryReadme", () => {
           reject(new DOMException("Aborted", "AbortError"));
         });
       });
+
     });
 
     const loading = loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
@@ -148,5 +153,42 @@ describe("loadRepositoryReadme", () => {
     expect(document.getElementById("repository-readme-content").hidden).toBe(
       true
     );
+  });
+});
+
+describe("readResponseTextWithLimit", () => {
+  test("rejects a declared oversized README before reading it", async () => {
+    const response = {
+      headers: {
+        get: jest.fn().mockReturnValue(String(README_MAX_LENGTH + 1)),
+      },
+      text: jest.fn(),
+    };
+
+    await expect(
+      readResponseTextWithLimit(response, README_MAX_LENGTH)
+    ).rejects.toThrow("README is too large");
+    expect(response.text).not.toHaveBeenCalled();
+  });
+
+  test("cancels a streamed README when it exceeds the limit", async () => {
+    const reader = {
+      read: jest.fn().mockResolvedValue({
+        done: false,
+        value: new Uint8Array(README_MAX_LENGTH + 1),
+      }),
+      cancel: jest.fn().mockResolvedValue(),
+      releaseLock: jest.fn(),
+    };
+    const response = {
+      headers: { get: jest.fn().mockReturnValue(null) },
+      body: { getReader: jest.fn().mockReturnValue(reader) },
+    };
+
+    await expect(
+      readResponseTextWithLimit(response, README_MAX_LENGTH)
+    ).rejects.toThrow("README is too large");
+    expect(reader.cancel).toHaveBeenCalledTimes(1);
+    expect(reader.releaseLock).toHaveBeenCalledTimes(1);
   });
 });
