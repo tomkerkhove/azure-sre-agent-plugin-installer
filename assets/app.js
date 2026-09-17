@@ -114,6 +114,10 @@ function buildInstallerUrl(baseUrl, repo, path, theme) {
 
 // The badge generator lives on the landing page, but generated badges always
 // need to link to the dedicated install page.
+//
+// Note: the "install.html" filename is also referenced by
+// `buildInstallPageRedirectUrl` in assets/redirect-legacy.js - keep both in
+// sync if the install page is ever renamed.
 function getInstallPageUrl(currentHref) {
   return new URL("install.html", currentHref).toString();
 }
