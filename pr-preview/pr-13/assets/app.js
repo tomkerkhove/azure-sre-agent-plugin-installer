@@ -880,10 +880,12 @@ function renderInstallCard(repo, path) {
   const portalLink = container.querySelector(`a[href="${SRE_AGENT_PORTAL_URL}"]`);
   copyBtn.addEventListener("click", () => {
     copyToClipboard(repo)
-      .then(() => showToast("Repository copied to clipboard"))
+      .then(() => {
+        showToast("Repository copied to clipboard");
+        track("PluginRepositoryCopied", { repository: repo, hasPath: Boolean(path) });
+        trackPluginInstall(repo, { hasPath: Boolean(path), step: "repository-copied" });
+      })
       .catch(() => {});
-    track("PluginRepositoryCopied", { repository: repo, hasPath: Boolean(path) });
-    trackPluginInstall(repo, { hasPath: Boolean(path), step: "repository-copied" });
   });
 
   portalLink.addEventListener("click", () => {
@@ -986,6 +988,7 @@ if (typeof module !== "undefined" && module.exports) {
     applyTheme,
     buildInstallerUrl,
     buildBadgeMarkdown,
+    copyToClipboard,
     DEFAULT_THEME,
     SUPPORTED_THEMES,
   };
