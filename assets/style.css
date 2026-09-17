@@ -250,11 +250,6 @@ pre.output {
   font-size: 0.85rem;
 }
 
-.online-installer {
-  border-top: 1px solid var(--border);
-  margin-top: 20px;
-}
-
 .status {
   border-radius: 6px;
   padding: 10px 12px;
@@ -278,13 +273,13 @@ pre.output {
   color: #a4262c;
 }
 
-.alternative-options {
+.installation-option {
   border-top: 1px solid var(--border);
   margin-top: 24px;
   padding-top: 18px;
 }
 
-.alternative-options summary {
+.installation-option summary {
   cursor: pointer;
   color: var(--azure-blue);
   font-weight: 600;

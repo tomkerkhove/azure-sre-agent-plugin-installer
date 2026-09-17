@@ -560,13 +560,22 @@ function initOnlineInstaller(repo, path) {
   const details = document.getElementById("agent-details");
   const installBtn = document.getElementById("install-btn");
   const status = document.getElementById("online-status");
-  const alternatives = document.getElementById("alternative-options");
+  const fallbackOptions = [
+    document.getElementById("portal-install-option"),
+    document.getElementById("cli-install-option"),
+  ];
   const config = getInstallerConfig();
   let agents = [];
 
+  function showFallbackOptions() {
+    for (const option of fallbackOptions) {
+      option.open = true;
+    }
+  }
+
   if (!config.clientId) {
     signInBtn.disabled = true;
-    alternatives.open = true;
+    showFallbackOptions();
     setStatus(
       status,
       "Online installation isn't configured yet. Use an alternative installation option below.",
@@ -630,7 +639,7 @@ function initOnlineInstaller(repo, path) {
         "success"
       );
     } catch (error) {
-      alternatives.open = true;
+      showFallbackOptions();
       setStatus(status, getFriendlyError(error, "list"), "error");
     } finally {
       signInBtn.disabled = false;
@@ -731,7 +740,7 @@ function initOnlineInstaller(repo, path) {
         "success"
       );
     } catch (error) {
-      alternatives.open = true;
+      showFallbackOptions();
       setStatus(status, getFriendlyError(error, "install"), "error");
     } finally {
       installBtn.disabled = !canAttemptInstallation(agents[index]);
@@ -760,8 +769,8 @@ function renderInstallCard(repo, path) {
           : ""
       }
     </dl>
-    <div class="online-installer">
-      <h3>Choose an Azure SRE Agent</h3>
+    <details class="installation-option" id="online-install-option" open>
+      <summary>Choose an Azure SRE Agent</summary>
       <p>
         Sign in with Microsoft to find the agents you can access. Your access tokens
         stay in this browser tab and aren't stored by this site.
@@ -790,10 +799,9 @@ function renderInstallCard(repo, path) {
         is currently in preview. Browser installation also depends on support from
         your tenant and agent endpoint; use an option below if it isn't available.
       </p>
-    </div>
-    <details class="alternative-options" id="alternative-options">
-      <summary>Other installation options</summary>
-      <h3>Install in the Azure portal</h3>
+    </details>
+    <details class="installation-option" id="portal-install-option">
+      <summary>Install in the Azure portal</summary>
       <ol class="steps">
         <li>Open your <strong>Azure SRE Agent</strong> instance in the Azure portal.</li>
         <li>Go to <strong>Builder &gt; Plugins</strong>, then choose <strong>Install from URL</strong>.</li>
@@ -808,7 +816,9 @@ function renderInstallCard(repo, path) {
         <a class="btn" href="${SRE_AGENT_PORTAL_URL}" target="_blank" rel="noopener noreferrer">Open Azure SRE Agent</a>
         <a class="btn secondary" href="${repoUrl}" target="_blank" rel="noopener noreferrer">View plugin source</a>
       </div>
-      <h3>Generate an Azure CLI command</h3>
+    </details>
+    <details class="installation-option" id="cli-install-option">
+      <summary>Generate an Azure CLI command</summary>
       <p>
         Enter your agent's data plane endpoint to generate a command that imports this
         plugin using your local Azure CLI session.
