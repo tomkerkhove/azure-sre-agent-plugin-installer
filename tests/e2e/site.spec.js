@@ -69,6 +69,46 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(output).toContainText("path=plugins%2Fmy-plugin");
   });
 
+  test("uses the light theme by default", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  });
+
+  test("uses the dark theme when the theme query parameter is dark", async ({ page }) => {
+    await page.goto("/?repo=owner/repo&theme=dark");
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+
+  test("falls back to the light theme for an unsupported theme", async ({ page }) => {
+    await page.goto("/?repo=owner/repo&theme=neon");
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  });
+
+  test("includes the selected theme in the generated badge markdown", async ({ page }) => {
+    await page.goto("/");
+
+    await page.locator("#gen-repo").fill("owner/repo");
+    await page.locator("#gen-theme").selectOption("dark");
+    await page.locator("#generator-form button[type=submit]").click();
+
+    await expect(page.locator("#generator-output")).toContainText("theme=dark");
+  });
+
+  test("omits the theme from the generated badge markdown for the light theme", async ({ page }) => {
+    await page.goto("/");
+
+    await page.locator("#gen-repo").fill("owner/repo");
+    await page.locator("#gen-theme").selectOption("light");
+    await page.locator("#generator-form button[type=submit]").click();
+
+    const output = page.locator("#generator-output");
+    await expect(output).toContainText("repo=owner%2Frepo");
+    await expect(output).not.toContainText("theme=");
+  });
+
   test("shows a validation message for an invalid repository in the generator", async ({ page }) => {
     await page.goto("/");
 

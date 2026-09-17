@@ -30,6 +30,18 @@ When someone clicks the badge, they land on a page that:
 3. Provides a copy-to-clipboard shortcut for the repository reference they
    need to paste into their Azure SRE Agent instance.
 
+### Choosing a theme
+
+The page renders in a light theme by default. Add `theme=dark` to the link to
+render it in a dark theme instead:
+
+```markdown
+[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/?repo=owner/repo&theme=dark)
+```
+
+Any other value falls back to the light theme. The badge generator on the site
+lets you pick the theme and includes it in the generated link.
+
 You can also use the **badge generator** on the site itself to build the
 Markdown snippet for your repository without crafting the URL by hand.
 
@@ -37,9 +49,9 @@ Markdown snippet for your repository without crafting the URL by hand.
 
 * [`index.html`](./index.html), [`assets/app.js`](./assets/app.js) and
   [`assets/style.css`](./assets/style.css) implement the static site.
-* The site reads the `repo` (and optional `path`) query string parameters at
-  page load and renders installation instructions accordingly - no backend or
-  build step is required.
+* The site reads the `repo` (and optional `path` and `theme`) query string
+  parameters at page load and renders installation instructions accordingly -
+  no backend or build step is required.
 * [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml)
   publishes the site to GitHub Pages on every push to `main` or on demand.
 
@@ -70,7 +82,7 @@ npm install
 
 * **Unit tests** ([Jest](https://jestjs.io/)) cover the pure logic in
   [`assets/app.js`](./assets/app.js), such as repository normalization and
-  badge URL/markdown generation:
+  badge URL/markdown generation and theme normalization:
 
   ```bash
   npm test
@@ -78,12 +90,16 @@ npm install
 
 * **UI tests** ([Playwright](https://playwright.dev/)) exercise the site in a
   real browser - covering the empty state, install card rendering, the badge
-  generator form, and the copy-to-clipboard actions:
+  generator form, theme selection, and the copy-to-clipboard actions:
 
   ```bash
   npx playwright install --with-deps chromium
   npm run test:e2e
   ```
+
+Every behavior change - by humans or AI agents - must come with tests. See
+[`AGENTS.md`](./AGENTS.md) for the guidelines that agents contributing to this
+repository must follow.
 
 > **Note:** This project is not affiliated with or endorsed by Microsoft. It
 > only links to the official Azure SRE Agent portal and documentation to help
