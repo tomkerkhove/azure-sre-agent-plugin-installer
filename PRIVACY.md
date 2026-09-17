@@ -34,12 +34,26 @@ Only after consent, and only these fields:
 * The public GitHub repository (`owner/repo`) of the plugin being installed and
   whether a sub-path was used.
 * Standard Application Insights ingestion metadata (timestamp, browser user
-  agent, and a coarse, city-level location derived from your IP address; the IP
-  address itself is not stored by Application Insights).
+  agent, and a coarse, city-level location derived from your IP address). IP
+  masking is left at its Azure default, so the IP address is used to derive that
+  location and is then discarded rather than stored.
+
+This data is **pseudonymous** rather than fully anonymous: the random session
+identifier, user agent and coarse location relate to a visit rather than to a
+person, but they are still personal data under the GDPR. Microsoft acts as the
+data processor for the Azure Application Insights resource.
 
 What is **never** collected: names, e-mail addresses, IP addresses, Azure
 subscription or tenant identifiers, Azure credentials/tokens, the full page URL,
 or free-text you type into the badge generator.
+
+## Third-party content
+
+The page embeds the "Install to Azure SRE Agent" badge image from
+[shields.io](https://shields.io). Loading that image is a request to a third
+party and happens before any privacy choice is made, because it is part of the
+page itself rather than analytics. shields.io therefore sees your IP address and
+browser user agent. No other third-party content, scripts or trackers are used.
 
 ## Where data goes
 
@@ -50,8 +64,9 @@ to improve the site. Data is not sold or shared with third parties.
 
 ## Your rights
 
-Because the collected data is anonymous and cannot be linked back to an
-individual, we are unable to identify data belonging to a specific person. If
+The collected data contains no identifiers that let us link a visit back to an
+individual, so we are generally unable to locate data belonging to a specific
+person for access or erasure requests. If
 you do not want any data collected, decline analytics (or withdraw consent) -
 that takes effect immediately. Questions? Open an issue in
 [this repository](https://github.com/tomkerkhove/tomkerkhove-azure-sre-agent-plugin-installer/issues).

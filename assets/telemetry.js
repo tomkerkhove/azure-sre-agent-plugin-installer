@@ -223,14 +223,16 @@
     var body = JSON.stringify([envelope]);
 
     try {
+      // `text/plain` keeps the request a CORS "simple request" (no preflight),
+      // which is what the Application Insights ingestion API expects.
       if (typeof navigator.sendBeacon === "function") {
-        var blob = new Blob([body], { type: "application/json" });
+        var blob = new Blob([body], { type: "text/plain;charset=UTF-8" });
         if (navigator.sendBeacon(endpoint.trackUrl, blob)) return;
       }
       fetch(endpoint.trackUrl, {
         method: "POST",
         body: body,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
         mode: "cors",
         credentials: "omit",
         keepalive: true,

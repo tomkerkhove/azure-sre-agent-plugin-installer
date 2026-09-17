@@ -45,7 +45,7 @@ Markdown snippet for your repository without crafting the URL by hand.
 
 ## Usage analytics
 
-The site can report anonymous usage analytics (page views, generated badges and
+The site can report pseudonymous usage analytics (page views, generated badges and
 which plugin repositories are installed) to Azure Application Insights, so that
 adoption and scenarios can be understood.
 
