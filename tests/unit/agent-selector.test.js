@@ -47,7 +47,7 @@ test("validates Azure SRE Agent data plane endpoints", () => {
   for (const endpoint of [
     "http://agent.hash.eastus.azuresre.ai/",
     "https://username@agent.hash.eastus.azuresre.ai/",
-    "https://agent.hash.eastus.azuresre.ai:443/",
+    "https://agent.hash.eastus.azuresre.ai:8443/",
     "https://agent.hash.eastus.azuresre.ai/other",
     "https://agent.hash.eastus.azuresre.ai/?query=value",
     "https://agent.hash.eastus.azuresre.ai/#fragment",
