@@ -261,6 +261,36 @@ describe("exception telemetry", () => {
     expect(envelopes()[0].data.baseData.exceptions[0].typeName).toBe("Error");
   });
 
+  test("only sends allowlisted exception context and values", () => {
+    const { telemetry, envelopes } = loadTelemetry(VALID_CONNECTION_STRING);
+    telemetry.setConsent(true);
+    telemetry.trackException(new Error("private"), {
+      handled: "yes",
+      operation: "account=private",
+      source: "https://private.example/path",
+      status: 999,
+      secret: "private-value",
+    });
+
+    expect(envelopes()[0].data.baseData.properties).toEqual({});
+  });
+
+  test("sends a valid API status with handled operation context", () => {
+    const { telemetry, envelopes } = loadTelemetry(VALID_CONNECTION_STRING);
+    telemetry.setConsent(true);
+    telemetry.trackException(new Error("private"), {
+      handled: true,
+      operation: "list-agents",
+      status: 503,
+    });
+
+    expect(envelopes()[0].data.baseData.properties).toEqual({
+      handled: "true",
+      operation: "list-agents",
+      status: "503",
+    });
+  });
+
   test("captures unhandled errors and promise rejections after consent", () => {
     const { telemetry, listeners, envelopes } = loadTelemetry(VALID_CONNECTION_STRING);
     telemetry.setConsent(true);

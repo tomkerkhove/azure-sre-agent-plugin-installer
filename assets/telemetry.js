@@ -28,6 +28,8 @@
     "AggregateError",
     "ApiError",
   ];
+  var SAFE_EXCEPTION_OPERATIONS = ["list-agents", "install-plugin"];
+  var SAFE_EXCEPTION_SOURCES = ["window-error", "unhandled-rejection"];
 
   // Application Insights ingestion is only accepted on these Azure Monitor
   // domains. Validating this guards against a misconfigured or tampered
@@ -285,6 +287,29 @@
     return SAFE_EXCEPTION_TYPES.indexOf(name) !== -1 ? name : "Error";
   }
 
+  function sanitizeExceptionProperties(properties) {
+    var result = {};
+    if (!properties || typeof properties !== "object") return result;
+
+    if (typeof properties.handled === "boolean") {
+      result.handled = String(properties.handled);
+    }
+    if (SAFE_EXCEPTION_OPERATIONS.indexOf(properties.operation) !== -1) {
+      result.operation = properties.operation;
+    }
+    if (SAFE_EXCEPTION_SOURCES.indexOf(properties.source) !== -1) {
+      result.source = properties.source;
+    }
+    if (
+      Number.isInteger(properties.status) &&
+      properties.status >= 100 &&
+      properties.status <= 599
+    ) {
+      result.status = String(properties.status);
+    }
+    return result;
+  }
+
   function trackException(exception, properties) {
     var typeName = exceptionType(exception);
     send("ExceptionData", {
@@ -301,7 +326,7 @@
         },
       ],
       severityLevel: 3,
-      properties: sanitizeProperties(properties),
+      properties: sanitizeExceptionProperties(properties),
     });
   }
 
