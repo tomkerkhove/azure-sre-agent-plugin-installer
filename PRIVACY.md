@@ -43,7 +43,7 @@ identifier, user agent and coarse location relate to a visit rather than to a
 person, but they are still personal data under the GDPR. Microsoft acts as the
 data processor for the Azure Application Insights resource.
 
-What is **never** collected: names, e-mail addresses, IP addresses, Azure
+What is **never** stored: names, e-mail addresses, IP addresses, Azure
 subscription or tenant identifiers, Azure credentials/tokens, the full page URL,
 or free-text you type into the badge generator.
 

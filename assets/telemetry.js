@@ -146,7 +146,13 @@
     } catch (error) {
       /* fall through */
     }
-    return "";
+    // Last-resort fallback: only used to group the events of a single visit,
+    // never for anything security-sensitive.
+    var fallback = "";
+    for (var j = 0; j < 4; j++) {
+      fallback += ("00000000" + Math.floor(Math.random() * 0x100000000).toString(16)).slice(-8);
+    }
+    return fallback;
   }
 
   // A per-tab, randomly generated identifier. It is not a cookie, is never
@@ -312,7 +318,11 @@
       banner.hidden = !configured() || consent !== null;
     }
     if (manage) {
-      manage.hidden = !configured();
+      manage.hidden = false;
+    }
+    var change = document.getElementById("consent-change");
+    if (change) {
+      change.hidden = !configured();
     }
     if (status) {
       if (!configured()) {
