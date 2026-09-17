@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Install to Azure SRE Agent</title>
+  <meta
+    name="description"
+    content="Install community plugins to your Azure SRE Agent instance, and generate an 'Install to Azure SRE Agent' badge for your own plugin repository."
+  />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="wrapper">
+    <header class="hero">
+      <div class="badge-preview">
+        <img
+          src="https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white"
+          alt="Install to Azure SRE Agent badge"
+        />
+      </div>
+      <h1>Install to Azure SRE Agent</h1>
+      <p>
+        A "Deploy to Azure" button, but for
+        <a href="https://aka.ms/sreagent" target="_blank" rel="noopener noreferrer">Azure SRE Agent</a>
+        plugins.
+      </p>
+    </header>
+
+    <section class="card" id="install-card" hidden></section>
+
+    <section class="card empty-state" id="empty-state">
+      <h2>No plugin specified</h2>
+      <p>
+        Link to this page with a <code>repo</code> query parameter to guide visitors through
+        installing your plugin, for example:
+      </p>
+      <pre class="output">https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/?repo=owner/repo</pre>
+      <p class="hint">Or use the generator below to build your own badge.</p>
+    </section>
+
+    <section class="card">
+      <h2>Generate your own badge</h2>
+      <p class="hint">
+        Point people at your Azure SRE Agent plugin, so they can install it into their own
+        instance with one click - similar to the
+        <a
+          href="https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-to-azure-button"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Deploy to Azure button</a
+        >.
+      </p>
+      <form id="generator-form">
+        <div class="field">
+          <label for="gen-repo">GitHub repository</label>
+          <input
+            id="gen-repo"
+            type="text"
+            placeholder="owner/repo or https://github.com/owner/repo"
+            required
+          />
+        </div>
+        <div class="field">
+          <label for="gen-path">Path in repository (optional)</label>
+          <input id="gen-path" type="text" placeholder="plugins/my-plugin" />
+        </div>
+        <div class="actions">
+          <button type="submit">Generate badge markdown</button>
+          <button type="button" class="secondary" id="copy-badge-btn">Copy</button>
+        </div>
+      </form>
+      <pre class="output" id="generator-output" hidden></pre>
+    </section>
+
+    <footer>
+      <p>
+        Not affiliated with Microsoft. Built to help the
+        <a href="https://aka.ms/sreagent" target="_blank" rel="noopener noreferrer">Azure SRE Agent</a>
+        plugin ecosystem grow.
+      </p>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
