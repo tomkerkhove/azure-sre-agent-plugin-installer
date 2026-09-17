@@ -25,6 +25,7 @@ jobs:
           npm ci
           npm run build
           rm -rf node_modules
+          rm .gitignore
 
       - name: Deploy or remove PR preview
         uses: rossjrw/pr-preview-action@v1

@@ -9,6 +9,19 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("h1")).toHaveText("Install to Azure SRE Agent");
   });
 
+  test("loads the bundled MSAL browser library", async ({ page }) => {
+    const msalResponse = page.waitForResponse((response) =>
+      response.url().endsWith("/assets/vendor/msal-browser.min.js")
+    );
+
+    await page.goto("/");
+
+    expect((await msalResponse).status()).toBe(200);
+    expect(
+      await page.evaluate(() => typeof window.msal?.PublicClientApplication === "function")
+    ).toBe(true);
+  });
+
   test("renders the install card when a repo query parameter is provided", async ({ page }) => {
     await page.goto("/?repo=owner/repo");
 
