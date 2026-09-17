@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://img.shields.io; connect-src https://login.microsoftonline.com https://management.azure.com https://*.azuresre.ai https://dc.services.visualstudio.com https://*.applicationinsights.azure.com https://*.monitor.azure.com https://*.applicationinsights.azure.cn https://*.monitor.azure.cn https://*.applicationinsights.azure.us https://*.monitor.azure.us; frame-src https://login.microsoftonline.com; base-uri 'none'; form-action 'self'"
+  />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>Install a plugin - Install to Azure SRE Agent</title>
+  <meta
+    name="description"
+    content="Install a community plugin to your Azure SRE Agent instance using a repo link, similar to a 'Deploy to Azure' button."
+  />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="wrapper">
+    <header class="hero">
+      <div class="badge-preview">
+        <img
+          src="https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white"
+          alt="Install to Azure SRE Agent badge"
+        />
+      </div>
+      <h1>Install to Azure SRE Agent</h1>
+      <p>
+        A "Deploy to Azure" button, but for
+        <a href="https://aka.ms/sreagent" target="_blank" rel="noopener noreferrer">Azure SRE Agent</a>
+        plugins. Install a plugin into your own agent below.
+      </p>
+    </header>
+
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav-link" href="index.html">Generate a badge</a>
+      <a class="site-nav-link" href="install.html" aria-current="page">Install a plugin</a>
+    </nav>
+
+    <section class="card" id="install-card" hidden></section>
+
+    <section class="card empty-state" id="empty-state">
+      <h2>No plugin specified</h2>
+      <p>
+        Link to this page with a <code>repo</code> query parameter to guide visitors through
+        installing your plugin, for example:
+      </p>
+      <pre class="output">https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/install.html?repo=owner/repo</pre>
+      <p class="hint">
+        Don't have a link yet? Use the
+        <a href="index.html">badge generator</a> to build one for your own plugin.
+      </p>
+    </section>
+
+    <footer>
+      <p id="consent-manage" hidden>
+        <span id="consent-status"></span>
+        <a href="#" id="consent-change" hidden>Change privacy choice</a>
+        &middot;
+        <a href="https://github.com/tomkerkhove/azure-sre-agent-plugin-installer/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">Privacy statement</a>
+      </p>
+      <p>
+        Not affiliated with Microsoft. Built to help the
+        <a href="https://aka.ms/sreagent" target="_blank" rel="noopener noreferrer">Azure SRE Agent</a>
+        plugin ecosystem grow.
+        <a
+          href="https://github.com/tomkerkhove/azure-sre-agent-plugin-installer"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Contribute on GitHub</a
+        >.
+      </p>
+      <button
+        type="button"
+        class="secondary theme-toggle"
+        id="theme-toggle"
+        aria-label="Switch to dark theme"
+        title="Switch to dark theme"
+      >
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path>
+        </svg>
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+        </svg>
+      </button>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="consent-banner" id="consent-banner" role="region" aria-live="polite" aria-label="Privacy choice" hidden>
+    <div class="consent-banner-text">
+      <strong>Help us improve this site?</strong>
+      <p>
+        We would like to collect pseudonymous usage and reliability analytics (pages viewed, which
+        plugins are installed, and application error categories) in Azure Application Insights. No
+        cookies and no tracking across sites, and no analytics are collected unless you agree. See our
+        <a href="https://github.com/tomkerkhove/azure-sre-agent-plugin-installer/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">privacy statement</a>.
+      </p>
+    </div>
+    <div class="consent-banner-actions">
+      <button type="button" id="consent-accept">Allow analytics</button>
+      <button type="button" class="secondary" id="consent-decline">Decline</button>
+    </div>
+  </div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/telemetry.js"></script>
+  <script src="assets/vendor/msal-browser.min.js"></script>
+  <script src="assets/install-page.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
