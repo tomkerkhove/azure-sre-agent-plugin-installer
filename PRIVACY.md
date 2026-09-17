@@ -71,7 +71,7 @@ individual, so we are generally unable to locate data belonging to a specific
 person for access or erasure requests. If
 you do not want any data collected, decline analytics (or withdraw consent) -
 that takes effect immediately. Questions? Open an issue in
-[this repository](https://github.com/tomkerkhove/tomkerkhove-azure-sre-agent-plugin-installer/issues).
+[this repository](https://github.com/tomkerkhove/azure-sre-agent-plugin-installer/issues).
 
 ## Security note about credentials
 
