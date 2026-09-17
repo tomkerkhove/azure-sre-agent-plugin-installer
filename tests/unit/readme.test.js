@@ -10,6 +10,7 @@ const originalFetch = global.fetch;
 
 afterEach(() => {
   global.fetch = originalFetch;
+  window.sessionStorage.clear();
   jest.useRealTimers();
 });
 
@@ -52,6 +53,15 @@ describe("sanitizeRepositoryReadmeHtml", () => {
     expect(window.__xss).toBeUndefined();
   });
 
+  test("removes images with empty sources", () => {
+    const wrapper = sanitize(`
+      <img alt="Missing source">
+      <img src="  " alt="Empty source">
+    `);
+
+    expect(wrapper.querySelector("img")).toBeNull();
+  });
+
   test("allows GitHub-hosted images without forwarding a referrer", () => {
     const wrapper = sanitize(`
       <img
@@ -88,6 +98,32 @@ describe("sanitizeRepositoryReadmeHtml", () => {
 });
 
 describe("loadRepositoryReadme", () => {
+  test("reuses a rendered README during the browser session", async () => {
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue("<h1>Azure Carbon SRE</h1>"),
+    });
+
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(
+      document.querySelector("#repository-readme-content h1").textContent
+    ).toBe("Azure Carbon SRE");
+    expect(document.getElementById("repository-readme-status").hidden).toBe(
+      true
+    );
+  });
+
   test("shows the fallback when the GitHub request times out", async () => {
     jest.useFakeTimers();
     document.body.innerHTML = `

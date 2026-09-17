@@ -33,6 +33,8 @@ let signedInAccount = null;
 const DEFAULT_THEME = "light";
 const SUPPORTED_THEMES = ["light", "dark"];
 const README_REQUEST_TIMEOUT_MS = 8000;
+const README_CACHE_PREFIX = "sre-agent-plugin-installer.readme.";
+const README_CACHE_MAX_LENGTH = 500000;
 const README_ALLOWED_ELEMENTS = new Set([
   "a",
   "blockquote",
@@ -208,6 +210,28 @@ function buildRepositoryReadmeApiUrl(repo) {
   return `${GITHUB_API_URL}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/readme`;
 }
 
+function getCachedRepositoryReadme(repo) {
+  try {
+    if (typeof window === "undefined" || !window.sessionStorage) return null;
+    const markup = window.sessionStorage.getItem(`${README_CACHE_PREFIX}${repo}`);
+    return markup && markup.length <= README_CACHE_MAX_LENGTH ? markup : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function cacheRepositoryReadme(repo, markup) {
+  if (!markup || markup.length > README_CACHE_MAX_LENGTH) return;
+
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      window.sessionStorage.setItem(`${README_CACHE_PREFIX}${repo}`, markup);
+    }
+  } catch (_error) {
+    // Continue without caching when browser storage is unavailable or full.
+  }
+}
+
 function sanitizeRepositoryReadmeHtml(markup, repo) {
   const template = document.createElement("template");
   const repoUrl = `https://github.com/${repo}`;
@@ -260,6 +284,11 @@ function sanitizeRepositoryReadmeHtml(markup, repo) {
     }
 
     if (tagName === "img") {
+      if (!src || !src.trim()) {
+        element.remove();
+        return;
+      }
+
       let target;
       try {
         target = new URL(src, imageBaseUrl);
@@ -301,6 +330,17 @@ async function loadRepositoryReadme(repo) {
   const status = document.getElementById("repository-readme-status");
   if (!content || !status) return;
 
+  const cachedMarkup = getCachedRepositoryReadme(repo);
+  if (cachedMarkup) {
+    const sanitizedMarkup = sanitizeRepositoryReadmeHtml(cachedMarkup, repo);
+    if (sanitizedMarkup.trim()) {
+      content.innerHTML = sanitizedMarkup;
+      content.hidden = false;
+      status.hidden = true;
+      return;
+    }
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(
     () => controller.abort(),
@@ -327,6 +367,7 @@ async function loadRepositoryReadme(repo) {
     content.innerHTML = sanitizedMarkup;
     content.hidden = false;
     status.hidden = true;
+    cacheRepositoryReadme(repo, sanitizedMarkup);
   } catch (_error) {
     status.textContent =
       "The README preview is unavailable. View it on GitHub instead.";
@@ -948,7 +989,14 @@ function renderInstallCard(repo, path) {
         <a href="${repoUrl}" target="_blank" rel="noopener noreferrer">View on GitHub</a>
       </div>
       <p id="repository-readme-status" class="hint" role="status">Loading README…</p>
-      <div id="repository-readme-content" class="repository-readme-content" hidden></div>
+      <div
+        id="repository-readme-content"
+        class="repository-readme-content"
+        role="region"
+        aria-labelledby="repository-readme-heading"
+        tabindex="0"
+        hidden
+      ></div>
     </section>
     <div class="online-installer">
       <h3>Choose an Azure SRE Agent</h3>

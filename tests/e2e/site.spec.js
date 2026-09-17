@@ -53,9 +53,11 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("renders the repository README in the install card", async ({ page }) => {
+    let readmeRequests = 0;
     await page.route(
       "https://api.github.com/repos/tomkerkhove/azure-carbon-sre/readme",
       async (route) => {
+        readmeRequests += 1;
         expect(route.request().headers().accept).toBe(
           "application/vnd.github.html+json"
         );
@@ -81,7 +83,20 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(readme).toBeVisible();
     await expect(readme.locator("h1")).toHaveText("Azure Carbon SRE");
     await expect(readme.locator("table code")).toHaveText("azure-carbon-sre");
+    await expect(readme).toHaveAttribute("role", "region");
+    await expect(readme).toHaveAttribute(
+      "aria-labelledby",
+      "repository-readme-heading"
+    );
+    await expect(readme).toHaveAttribute("tabindex", "0");
     await expect(page.locator("#repository-readme-status")).toBeHidden();
+
+    await page.reload();
+
+    await expect(page.locator("#repository-readme-content h1")).toHaveText(
+      "Azure Carbon SRE"
+    );
+    expect(readmeRequests).toBe(1);
   });
 
   test("keeps the GitHub fallback when the README cannot be loaded", async ({ page }) => {
