@@ -12,6 +12,23 @@ const SRE_AGENT_API_DOCS_URL =
   "https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url#use-the-rest-api";
 const BADGE_IMAGE_URL =
   "https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white";
+const MANAGEMENT_SCOPE =
+  "https://management.azure.com/user_impersonation";
+const RESOURCE_GRAPH_URL =
+  "https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2024-04-01";
+const AGENT_API_VERSION = "2025-05-01-preview";
+const DEFAULT_DATA_PLANE_SCOPE = "https://azuresre.dev/.default";
+const AGENT_QUERY = `
+Resources
+| where type =~ 'microsoft.app/agents'
+| project id, name, subscriptionId, resourceGroup, location,
+    agentEndpoint=tostring(properties.agentEndpoint),
+    powerState=tostring(properties.powerState)
+| order by name asc
+`;
+
+let authClient = null;
+let signedInAccount = null;
 
 function normalizeRepo(rawRepo) {
   if (!rawRepo) return null;
@@ -108,6 +125,325 @@ curl --fail-with-body --request POST \\
   --data ${shellQuote(requestBody)}`;
 }
 
+function getInstallerConfig() {
+  const rawConfig =
+    typeof window === "undefined"
+      ? {}
+      : window.SRE_AGENT_INSTALLER_CONFIG || {};
+  const clientId =
+    typeof rawConfig.clientId === "string" ? rawConfig.clientId.trim() : "";
+  const tenantId =
+    typeof rawConfig.tenantId === "string"
+      ? rawConfig.tenantId.trim()
+      : "organizations";
+  const dataPlaneScope =
+    typeof rawConfig.dataPlaneScope === "string"
+      ? rawConfig.dataPlaneScope.trim()
+      : DEFAULT_DATA_PLANE_SCOPE;
+
+  return {
+    clientId: /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(
+      clientId
+    )
+      ? clientId
+      : "",
+    tenantId: /^[a-z0-9.-]+$/i.test(tenantId)
+      ? tenantId
+      : "organizations",
+    dataPlaneScope:
+      dataPlaneScope === DEFAULT_DATA_PLANE_SCOPE
+        ? dataPlaneScope
+        : DEFAULT_DATA_PLANE_SCOPE,
+  };
+}
+
+function getAuthRedirectUri() {
+  return new URL("auth.html", window.location.href).toString();
+}
+
+async function getAuthClient() {
+  if (authClient) return authClient;
+
+  const config = getInstallerConfig();
+  if (!config.clientId) {
+    throw new Error("authentication_not_configured");
+  }
+  if (typeof msal === "undefined" || !msal.PublicClientApplication) {
+    throw new Error("authentication_library_unavailable");
+  }
+
+  authClient = new msal.PublicClientApplication({
+    auth: {
+      clientId: config.clientId,
+      authority: `https://login.microsoftonline.com/${config.tenantId}`,
+      redirectUri: getAuthRedirectUri(),
+    },
+    cache: {
+      cacheLocation: "memoryStorage",
+      temporaryCacheLocation: "memoryStorage",
+    },
+  });
+  await authClient.initialize();
+  return authClient;
+}
+
+async function acquireAccessToken(
+  scopes,
+  { promptForAccount = false, forcePopup = false } = {}
+) {
+  const client = await getAuthClient();
+
+  if (!signedInAccount || promptForAccount) {
+    const result = await client.loginPopup({
+      scopes,
+      prompt: promptForAccount ? "select_account" : undefined,
+    });
+    signedInAccount = result.account;
+    return result.accessToken;
+  }
+
+  if (forcePopup) {
+    const result = await client.acquireTokenPopup({
+      account: signedInAccount,
+      scopes,
+    });
+    signedInAccount = result.account || signedInAccount;
+    return result.accessToken;
+  }
+
+  try {
+    const result = await client.acquireTokenSilent({
+      account: signedInAccount,
+      scopes,
+    });
+    return result.accessToken;
+  } catch (error) {
+    if (
+      typeof msal !== "undefined" &&
+      error instanceof msal.InteractionRequiredAuthError
+    ) {
+      const result = await client.acquireTokenPopup({
+        account: signedInAccount,
+        scopes,
+      });
+      signedInAccount = result.account;
+      return result.accessToken;
+    }
+    throw error;
+  }
+}
+
+class ApiError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+async function getResponseMessage(response) {
+  const text = (await response.text()).trim();
+  if (!text) {
+    return response.ok
+      ? ""
+      : `Request failed with status ${response.status}.`;
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    try {
+      const body = JSON.parse(text);
+      return (
+        body?.error?.message ||
+        body?.message ||
+        body?.detail ||
+        (response.ok ? "" : `Request failed with status ${response.status}.`)
+      );
+    } catch {
+      return response.ok ? "" : `Request failed with status ${response.status}.`;
+    }
+  }
+
+  return text.slice(0, 500);
+}
+
+async function queryAccessibleAgents(accessToken) {
+  const results = [];
+  let skipToken = "";
+
+  do {
+    const options = {
+      "$top": 1000,
+      resultFormat: "objectArray",
+      allowPartialScopes: true,
+    };
+    if (skipToken) {
+      options["$skipToken"] = skipToken;
+    }
+
+    const response = await fetch(RESOURCE_GRAPH_URL, {
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      headers: {
+        Authorization: ["Bearer", accessToken].join(" "),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: AGENT_QUERY,
+        options,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new ApiError(response.status, await getResponseMessage(response));
+    }
+
+    const result = await response.json();
+    if (!Array.isArray(result.data)) {
+      throw new Error("invalid_agent_response");
+    }
+
+    results.push(...result.data);
+    skipToken =
+      typeof result.$skipToken === "string" ? result.$skipToken : "";
+  } while (skipToken);
+
+  return results.map((agent) => ({
+    id: String(agent.id || ""),
+    name: String(agent.name || "Unnamed agent"),
+    subscriptionId: String(agent.subscriptionId || ""),
+    resourceGroup: String(agent.resourceGroup || ""),
+    location: String(agent.location || ""),
+    endpoint: normalizeAgentEndpoint(agent.agentEndpoint),
+    powerState: String(agent.powerState || "Unknown"),
+  }));
+}
+
+function normalizeAgentResourceId(resourceId) {
+  if (typeof resourceId !== "string") return null;
+  const normalized = resourceId.trim();
+  return /^\/subscriptions\/[^/?#]+\/resourceGroups\/[^/?#]+\/providers\/Microsoft\.App\/agents\/[^/?#]+$/i.test(
+    normalized
+  )
+    ? normalized
+    : null;
+}
+
+function canAttemptInstallation(agent) {
+  if (!agent || !normalizeAgentResourceId(agent.id)) return false;
+  const powerState = agent.powerState.toLowerCase();
+  return powerState === "running" || powerState === "unknown";
+}
+
+async function getCurrentAgent(agent, accessToken) {
+  const resourceId = normalizeAgentResourceId(agent.id);
+  if (!resourceId) {
+    throw new Error("invalid_agent_resource_id");
+  }
+
+  const url = new URL(
+    `${resourceId}?api-version=${AGENT_API_VERSION}`,
+    "https://management.azure.com"
+  );
+  const response = await fetch(url, {
+    method: "GET",
+    mode: "cors",
+    credentials: "omit",
+    headers: {
+      Authorization: ["Bearer", accessToken].join(" "),
+    },
+  });
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await getResponseMessage(response));
+  }
+
+  const result = await response.json();
+  return {
+    ...agent,
+    endpoint: normalizeAgentEndpoint(result?.properties?.agentEndpoint),
+    powerState: String(result?.properties?.powerState || "Unknown"),
+  };
+}
+
+async function importPlugin(agent, repo, path, accessToken) {
+  const response = await fetch(
+    `${agent.endpoint}/api/v2/plugins/install-direct`,
+    {
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      headers: {
+        Authorization: ["Bearer", accessToken].join(" "),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sourceUrl: repo,
+        pathInRepo: path,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await getResponseMessage(response));
+  }
+
+  if (response.status === 204) return "";
+  return getResponseMessage(response);
+}
+
+function getFriendlyError(error, action) {
+  if (error?.message === "authentication_not_configured") {
+    return "Online installation isn't configured yet. Use an alternative installation option below.";
+  }
+  if (error?.message === "authentication_library_unavailable") {
+    return "Microsoft sign-in couldn't be loaded. Refresh the page or use an alternative installation option.";
+  }
+  if (
+    error?.errorCode === "user_cancelled" ||
+    error?.errorCode === "user_cancelled_request"
+  ) {
+    return "Sign-in was cancelled. Try again when you're ready.";
+  }
+  if (
+    error?.errorCode === "popup_window_error" ||
+    error?.errorCode === "empty_window_error"
+  ) {
+    return "Microsoft sign-in needs a pop-up window. Allow pop-ups for this site and try again.";
+  }
+  if (
+    error?.errorCode === "consent_required" ||
+    error?.errorCode === "interaction_required" ||
+    /AADSTS65001|AADSTS650057|invalid_resource/i.test(error?.message || "")
+  ) {
+    return "This installer isn't permitted to request the required Azure access in your tenant. Ask an administrator to approve the app, or use an alternative installation option.";
+  }
+  if (error instanceof ApiError && error.status === 401) {
+    return "Your sign-in has expired or isn't valid for this operation. Sign in again and retry.";
+  }
+  if (error instanceof ApiError && error.status === 403) {
+    return action === "install"
+      ? "You need the SRE Agent Author or Administrator role on this agent."
+      : "You don't have permission to list Azure SRE Agents in this tenant.";
+  }
+  if (error instanceof TypeError) {
+    return "The Azure endpoint couldn't be reached from this browser. Check your network and browser policy, or use an alternative installation option.";
+  }
+  if (error instanceof ApiError && error.message) {
+    return `Azure returned: ${error.message}`;
+  }
+  return action === "install"
+    ? "The plugin couldn't be installed. Try again or use an alternative installation option."
+    : "Azure SRE Agents couldn't be loaded. Try again or use an alternative installation option.";
+}
+
+function setStatus(element, message, type = "") {
+  element.textContent = message;
+  element.className = `status${type ? ` ${type}` : ""}`;
+  element.hidden = !message;
+}
+
 function showToast(message) {
   const toast = document.getElementById("toast");
   if (!toast) return;
@@ -137,6 +473,197 @@ function copyToClipboard(text) {
   return Promise.resolve();
 }
 
+function initOnlineInstaller(repo, path) {
+  const signInBtn = document.getElementById("sign-in-btn");
+  const refreshAgentsBtn = document.getElementById("refresh-agents-btn");
+  const changeAccountBtn = document.getElementById("change-account-btn");
+  const form = document.getElementById("agent-install-form");
+  const select = document.getElementById("agent-select");
+  const details = document.getElementById("agent-details");
+  const installBtn = document.getElementById("install-btn");
+  const status = document.getElementById("online-status");
+  const alternatives = document.getElementById("alternative-options");
+  const config = getInstallerConfig();
+  let agents = [];
+
+  if (!config.clientId) {
+    signInBtn.disabled = true;
+    alternatives.open = true;
+    setStatus(
+      status,
+      "Online installation isn't configured yet. Use an alternative installation option below.",
+      "warning"
+    );
+    return;
+  }
+
+  async function loadAgents(promptForAccount) {
+    signInBtn.disabled = true;
+    refreshAgentsBtn.disabled = true;
+    changeAccountBtn.disabled = true;
+    form.hidden = true;
+    setStatus(status, "Signing in and finding your Azure SRE Agents…");
+
+    try {
+      const accessToken = await acquireAccessToken(
+        [MANAGEMENT_SCOPE],
+        { promptForAccount }
+      );
+      agents = await queryAccessibleAgents(accessToken);
+
+      select.replaceChildren(new Option("Choose an agent", ""));
+      for (const [index, agent] of agents.entries()) {
+        const state =
+          agent.powerState && agent.powerState !== "Unknown"
+            ? ` — ${agent.powerState}`
+            : "";
+        const option = new Option(
+          `${agent.name} — ${agent.resourceGroup} (${agent.subscriptionId})${state}`,
+          String(index)
+        );
+        option.disabled = !normalizeAgentResourceId(agent.id);
+        select.add(option);
+      }
+
+      signInBtn.hidden = true;
+      refreshAgentsBtn.hidden = false;
+      changeAccountBtn.hidden = false;
+      form.hidden = false;
+      select.disabled = agents.length === 0;
+      installBtn.disabled = true;
+      details.textContent = "";
+
+      if (agents.length === 0) {
+        setStatus(
+          status,
+          "No Azure SRE Agents were found in this account. Check the account, tenant, and Azure RBAC access.",
+          "warning"
+        );
+        return;
+      }
+
+      const accountName =
+        signedInAccount?.username ||
+        signedInAccount?.name ||
+        "your Microsoft account";
+      setStatus(
+        status,
+        `Signed in as ${accountName}. Choose one of ${agents.length} available agent${agents.length === 1 ? "" : "s"}.`,
+        "success"
+      );
+    } catch (error) {
+      alternatives.open = true;
+      setStatus(status, getFriendlyError(error, "list"), "error");
+    } finally {
+      signInBtn.disabled = false;
+      refreshAgentsBtn.disabled = false;
+      changeAccountBtn.disabled = false;
+    }
+  }
+
+  signInBtn.addEventListener("click", () => loadAgents(true));
+  refreshAgentsBtn.addEventListener("click", () => loadAgents(false));
+  changeAccountBtn.addEventListener("click", () => loadAgents(true));
+
+  select.addEventListener("change", () => {
+    const index = Number(select.value);
+    const agent =
+      select.value !== "" && Number.isInteger(index) ? agents[index] : null;
+
+    if (!agent) {
+      details.textContent = "";
+      installBtn.disabled = true;
+      return;
+    }
+
+    const location = agent.location ? ` in ${agent.location}` : "";
+    details.textContent = `${agent.name}${location} — ${agent.powerState}`;
+
+    if (!canAttemptInstallation(agent)) {
+      installBtn.disabled = true;
+      setStatus(
+        status,
+        "Start this Azure SRE Agent before installing the plugin.",
+        "warning"
+      );
+      return;
+    }
+
+    installBtn.disabled = false;
+    setStatus(
+      status,
+      `Ready to install ${repo} to ${agent.name}.`,
+      "success"
+    );
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const index = Number(select.value);
+    const agent =
+      select.value !== "" && Number.isInteger(index) ? agents[index] : null;
+    if (!canAttemptInstallation(agent)) {
+      return;
+    }
+
+    installBtn.disabled = true;
+    select.disabled = true;
+    refreshAgentsBtn.disabled = true;
+    changeAccountBtn.disabled = true;
+    setStatus(status, `Checking ${agent.name}…`);
+
+    try {
+      const dataPlaneToken = await acquireAccessToken(
+        [config.dataPlaneScope],
+        { forcePopup: true }
+      );
+      const managementToken = await acquireAccessToken([MANAGEMENT_SCOPE]);
+      const currentAgent = await getCurrentAgent(agent, managementToken);
+      agents[index] = currentAgent;
+
+      if (!currentAgent.endpoint) {
+        setStatus(
+          status,
+          "This agent doesn't have a valid data plane endpoint yet.",
+          "warning"
+        );
+        return;
+      }
+      if (currentAgent.powerState.toLowerCase() !== "running") {
+        setStatus(
+          status,
+          "Start this Azure SRE Agent, then refresh the list before installing.",
+          "warning"
+        );
+        return;
+      }
+
+      setStatus(status, `Installing ${repo} to ${currentAgent.name}…`);
+      const responseMessage = await importPlugin(
+        currentAgent,
+        repo,
+        path,
+        dataPlaneToken
+      );
+      setStatus(
+        status,
+        responseMessage ||
+          `${repo} was installed successfully on ${currentAgent.name}.`,
+        "success"
+      );
+    } catch (error) {
+      alternatives.open = true;
+      setStatus(status, getFriendlyError(error, "install"), "error");
+    } finally {
+      installBtn.disabled = !canAttemptInstallation(agents[index]);
+      select.disabled = false;
+      refreshAgentsBtn.disabled = false;
+      changeAccountBtn.disabled = false;
+    }
+  });
+}
+
 function renderInstallCard(repo, path) {
   const container = document.getElementById("install-card");
   if (!container) return;
@@ -155,50 +682,83 @@ function renderInstallCard(repo, path) {
           : ""
       }
     </dl>
-    <h3>Install with the REST API</h3>
-    <p>
-      Enter your agent's data plane endpoint to generate an Azure CLI command that
-      imports this plugin directly.
-    </p>
-    <form id="api-import-form">
-      <div class="field">
-        <label for="agent-endpoint">Azure SRE Agent endpoint</label>
-        <input
-          id="agent-endpoint"
-          type="url"
-          placeholder="https://your-agent...azuresre.ai"
-          autocomplete="url"
-          required
-        />
-      </div>
+    <div class="online-installer">
+      <h3>Choose an Azure SRE Agent</h3>
+      <p>
+        Sign in with Microsoft to find the agents you can access. Your access tokens
+        stay in this browser tab and aren't stored by this site.
+      </p>
       <div class="actions">
-        <button type="submit">Generate import command</button>
-        <button type="button" class="secondary" id="copy-import-btn" disabled>Copy command</button>
+        <button id="sign-in-btn" type="button">Sign in and find agents</button>
+        <button id="refresh-agents-btn" type="button" class="secondary" hidden>Refresh agents</button>
+        <button id="change-account-btn" type="button" class="secondary" hidden>Change account</button>
       </div>
-    </form>
-    <pre class="output" id="import-output" aria-live="polite" hidden></pre>
-    <p class="hint">
-      The agent must be running, and you need the SRE Agent Author or Administrator role.
-      The command uses the
-      <a href="${SRE_AGENT_API_DOCS_URL}" target="_blank" rel="noopener noreferrer">preview plugin import API</a>
-      and gets a short-lived token through your Azure CLI session.
-    </p>
-    <h3>Or install in the Azure portal</h3>
-    <ol class="steps">
-      <li>Open your <strong>Azure SRE Agent</strong> instance in the Azure portal.</li>
-      <li>Go to <strong>Builder &gt; Plugins</strong>, then choose <strong>Install from URL</strong>.</li>
-      <li>Paste the repository below and confirm the install.</li>
-    </ol>
-    <div class="copy-row">
-      <input id="repo-value" type="text" value="${repo}" readonly />
-      <button id="copy-repo-btn" type="button">Copy</button>
+      <p id="online-status" class="status" role="status" aria-live="polite" hidden></p>
+      <form id="agent-install-form" hidden>
+        <div class="field">
+          <label for="agent-select">Azure SRE Agent</label>
+          <select id="agent-select" required disabled>
+            <option value="">Choose an agent</option>
+          </select>
+        </div>
+        <p id="agent-details" class="hint" aria-live="polite"></p>
+        <button id="install-btn" type="submit" disabled>Install plugin</button>
+      </form>
+      <p class="hint">
+        The selected agent must be running, and you need the SRE Agent Author or
+        Administrator role. The online installer supports public GitHub repositories.
+        The
+        <a href="${SRE_AGENT_API_DOCS_URL}" target="_blank" rel="noopener noreferrer">plugin import API</a>
+        is currently in preview. Browser installation also depends on support from
+        your tenant and agent endpoint; use an option below if it isn't available.
+      </p>
     </div>
-    <p class="hint">Don't have an Azure SRE Agent yet? Create one first, then come back to this page.</p>
-    <div class="actions">
-      <a class="btn" href="${SRE_AGENT_PORTAL_URL}" target="_blank" rel="noopener noreferrer">Open Azure SRE Agent</a>
-      <a class="btn secondary" href="${repoUrl}" target="_blank" rel="noopener noreferrer">View plugin source</a>
-    </div>
+    <details class="alternative-options" id="alternative-options">
+      <summary>Other installation options</summary>
+      <h3>Generate an Azure CLI command</h3>
+      <p>
+        Enter your agent's data plane endpoint to generate a command that imports this
+        plugin using your local Azure CLI session.
+      </p>
+      <form id="api-import-form">
+        <div class="field">
+          <label for="agent-endpoint">Azure SRE Agent endpoint</label>
+          <input
+            id="agent-endpoint"
+            type="url"
+            placeholder="https://your-agent...azuresre.ai"
+            autocomplete="url"
+            required
+          />
+        </div>
+        <div class="actions">
+          <button type="submit">Generate import command</button>
+          <button type="button" class="secondary" id="copy-import-btn" disabled>Copy command</button>
+        </div>
+      </form>
+      <pre class="output" id="import-output" aria-live="polite" hidden></pre>
+      <p class="hint">
+        The command gets a short-lived token through your Azure CLI session.
+      </p>
+      <h3>Install in the Azure portal</h3>
+      <ol class="steps">
+        <li>Open your <strong>Azure SRE Agent</strong> instance in the Azure portal.</li>
+        <li>Go to <strong>Builder &gt; Plugins</strong>, then choose <strong>Install from URL</strong>.</li>
+        <li>Paste the repository below and confirm the install.</li>
+      </ol>
+      <div class="copy-row">
+        <input id="repo-value" type="text" value="${repo}" readonly />
+        <button id="copy-repo-btn" type="button">Copy</button>
+      </div>
+      <p class="hint">Don't have an Azure SRE Agent yet? Create one first, then come back to this page.</p>
+      <div class="actions">
+        <a class="btn" href="${SRE_AGENT_PORTAL_URL}" target="_blank" rel="noopener noreferrer">Open Azure SRE Agent</a>
+        <a class="btn secondary" href="${repoUrl}" target="_blank" rel="noopener noreferrer">View plugin source</a>
+      </div>
+    </details>
   `;
+
+  initOnlineInstaller(repo, path);
 
   const importForm = document.getElementById("api-import-form");
   const importOutput = document.getElementById("import-output");

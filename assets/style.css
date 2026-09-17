@@ -135,7 +135,17 @@ button.secondary {
   border: 1px solid var(--border);
 }
 
+.btn.secondary {
+  background: var(--surface-alt);
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
 button.secondary:hover {
+  background: #e8ecf2;
+}
+
+.btn.secondary:hover {
   background: #e8ecf2;
 }
 
@@ -166,12 +176,14 @@ button:disabled:hover {
   margin-bottom: 4px;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   padding: 9px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.9rem;
+  background: var(--surface);
 }
 
 pre.output {
@@ -186,6 +198,46 @@ pre.output {
 .hint {
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+.online-installer {
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+}
+
+.status {
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  background: #e8f3fc;
+  color: #004578;
+}
+
+.status.success {
+  background: #e7f4e4;
+  color: #0b6a0b;
+}
+
+.status.warning {
+  background: #fff4ce;
+  color: #6b4f00;
+}
+
+.status.error {
+  background: #fde7e9;
+  color: #a4262c;
+}
+
+.alternative-options {
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+  padding-top: 18px;
+}
+
+.alternative-options summary {
+  cursor: pointer;
+  color: var(--azure-blue);
+  font-weight: 600;
 }
 
 .empty-state {
