@@ -75,6 +75,35 @@ adoption and scenarios can be understood.
 Without the secret, `connectionString` stays empty and all telemetry (and the
 consent banner) is disabled.
 
+## Testing
+
+The site's logic and UI are covered by automated tests, run in CI via
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) on every push and
+pull request to `main`.
+
+Install dependencies first:
+
+```bash
+npm install
+```
+
+* **Unit tests** ([Jest](https://jestjs.io/)) cover the pure logic in
+  [`assets/app.js`](./assets/app.js), such as repository normalization and
+  badge URL/markdown generation:
+
+  ```bash
+  npm test
+  ```
+
+* **UI tests** ([Playwright](https://playwright.dev/)) exercise the site in a
+  real browser - covering the empty state, install card rendering, the badge
+  generator form, and the copy-to-clipboard actions:
+
+  ```bash
+  npx playwright install --with-deps chromium
+  npm run test:e2e
+  ```
+
 > **Note:** This project is not affiliated with or endorsed by Microsoft. It
 > only links to the official Azure SRE Agent portal and documentation to help
 > visitors complete the install themselves.
