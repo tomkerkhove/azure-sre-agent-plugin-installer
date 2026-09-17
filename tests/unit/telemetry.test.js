@@ -237,9 +237,12 @@ describe("exception telemetry", () => {
     expect(envelope.data.baseData.exceptions).toEqual([
       {
         id: 1,
+        outerId: 0,
         typeName: "TypeError",
         message: "An application exception occurred.",
         hasFullStack: false,
+        stack: "Stack trace omitted for privacy.",
+        parsedStack: [],
       },
     ]);
     expect(envelope.data.baseData.properties).toEqual({

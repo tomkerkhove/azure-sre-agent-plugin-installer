@@ -162,9 +162,12 @@ test.describe("Privacy consent", () => {
     );
     expect(exception.data.baseData.exceptions[0]).toEqual({
       id: 1,
+      outerId: 0,
       typeName: "TypeError",
       message: "An application exception occurred.",
       hasFullStack: false,
+      stack: "Stack trace omitted for privacy.",
+      parsedStack: [],
     });
     expect(exception.data.baseData.properties.source).toBe("window-error");
     expect(JSON.stringify(exception)).not.toContain("private-value");

@@ -292,9 +292,12 @@
       exceptions: [
         {
           id: 1,
+          outerId: 0,
           typeName: typeName,
           message: "An application exception occurred.",
           hasFullStack: false,
+          stack: "Stack trace omitted for privacy.",
+          parsedStack: [],
         },
       ],
       severityLevel: 3,
