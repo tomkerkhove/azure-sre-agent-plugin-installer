@@ -1,6 +1,17 @@
 /** @jest-environment jsdom */
 
-const { sanitizeRepositoryReadmeHtml } = require("../../assets/app.js");
+const {
+  sanitizeRepositoryReadmeHtml,
+  loadRepositoryReadme,
+  README_REQUEST_TIMEOUT_MS,
+} = require("../../assets/app.js");
+
+const originalFetch = global.fetch;
+
+afterEach(() => {
+  global.fetch = originalFetch;
+  jest.useRealTimers();
+});
 
 function sanitize(markup) {
   const wrapper = document.createElement("div");
@@ -59,5 +70,47 @@ describe("sanitizeRepositoryReadmeHtml", () => {
     expect(image.getAttribute("loading")).toBe("lazy");
     expect(image.getAttribute("referrerpolicy")).toBe("no-referrer");
     expect(image.getAttribute("style")).toBeNull();
+  });
+
+  test("resolves relative links and images against the repository", () => {
+    const wrapper = sanitize(`
+      <a href="CONTRIBUTING.md">Contribute</a>
+      <img src="images/plugin.png" alt="Plugin">
+    `);
+
+    expect(wrapper.querySelector("a").getAttribute("href")).toBe(
+      "https://github.com/tomkerkhove/azure-carbon-sre/blob/HEAD/CONTRIBUTING.md"
+    );
+    expect(wrapper.querySelector("img").getAttribute("src")).toBe(
+      "https://raw.githubusercontent.com/tomkerkhove/azure-carbon-sre/HEAD/images/plugin.png"
+    );
+  });
+});
+
+describe("loadRepositoryReadme", () => {
+  test("shows the fallback when the GitHub request times out", async () => {
+    jest.useFakeTimers();
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    global.fetch = jest.fn((_url, options) => {
+      return new Promise((_resolve, reject) => {
+        options.signal.addEventListener("abort", () => {
+          reject(new DOMException("Aborted", "AbortError"));
+        });
+      });
+    });
+
+    const loading = loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+    jest.advanceTimersByTime(README_REQUEST_TIMEOUT_MS);
+    await loading;
+
+    expect(document.getElementById("repository-readme-status").textContent).toBe(
+      "The README preview is unavailable. View it on GitHub instead."
+    );
+    expect(document.getElementById("repository-readme-content").hidden).toBe(
+      true
+    );
   });
 });

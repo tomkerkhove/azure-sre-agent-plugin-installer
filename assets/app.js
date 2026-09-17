@@ -32,6 +32,7 @@ let authClient = null;
 let signedInAccount = null;
 const DEFAULT_THEME = "light";
 const SUPPORTED_THEMES = ["light", "dark"];
+const README_REQUEST_TIMEOUT_MS = 8000;
 const README_ALLOWED_ELEMENTS = new Set([
   "a",
   "blockquote",
@@ -210,6 +211,8 @@ function buildRepositoryReadmeApiUrl(repo) {
 function sanitizeRepositoryReadmeHtml(markup, repo) {
   const template = document.createElement("template");
   const repoUrl = `https://github.com/${repo}`;
+  const linkBaseUrl = `${repoUrl}/blob/HEAD/`;
+  const imageBaseUrl = `https://raw.githubusercontent.com/${repo}/HEAD/`;
   template.innerHTML = markup;
 
   Array.from(template.content.querySelectorAll("*")).forEach((element) => {
@@ -243,7 +246,7 @@ function sanitizeRepositoryReadmeHtml(markup, repo) {
       try {
         const target = new URL(
           href.startsWith("#") ? `${repoUrl}${href}` : href,
-          `${repoUrl}/`
+          linkBaseUrl
         );
         if (target.protocol === "https:") {
           element.setAttribute("href", target.toString());
@@ -259,7 +262,7 @@ function sanitizeRepositoryReadmeHtml(markup, repo) {
     if (tagName === "img") {
       let target;
       try {
-        target = new URL(src, `${repoUrl}/`);
+        target = new URL(src, imageBaseUrl);
       } catch (_error) {
         element.remove();
         return;
@@ -298,6 +301,12 @@ async function loadRepositoryReadme(repo) {
   const status = document.getElementById("repository-readme-status");
   if (!content || !status) return;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    README_REQUEST_TIMEOUT_MS
+  );
+
   try {
     const response = await fetch(buildRepositoryReadmeApiUrl(repo), {
       credentials: "omit",
@@ -305,6 +314,7 @@ async function loadRepositoryReadme(repo) {
         Accept: "application/vnd.github.html+json",
       },
       referrerPolicy: "no-referrer",
+      signal: controller.signal,
     });
     if (!response.ok) throw new Error("README request failed");
 
@@ -320,6 +330,8 @@ async function loadRepositoryReadme(repo) {
   } catch (_error) {
     status.textContent =
       "The README preview is unavailable. View it on GitHub instead.";
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -1158,6 +1170,8 @@ if (typeof module !== "undefined" && module.exports) {
     buildBadgeMarkdown,
     buildRepositoryReadmeApiUrl,
     sanitizeRepositoryReadmeHtml,
+    loadRepositoryReadme,
+    README_REQUEST_TIMEOUT_MS,
     DEFAULT_THEME,
     SUPPORTED_THEMES,
   };

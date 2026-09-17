@@ -7,6 +7,7 @@
   --surface-alt: #f3f6fa;
   --border: #dfe4ec;
   --radius: 10px;
+  --readme-link: #0067b8;
   --button-secondary-hover: #e8ecf2;
   --shadow: rgba(0, 0, 0, 0.04);
 }
@@ -19,6 +20,7 @@
   --surface: #161b22;
   --surface-alt: #0d1117;
   --border: #30363d;
+  --readme-link: #58a6ff;
   --button-secondary-hover: #21262d;
   --shadow: rgba(0, 0, 0, 0.4);
 }
@@ -149,7 +151,7 @@ header.hero p {
 
 .repository-readme-header a,
 .repository-readme-content a {
-  color: var(--azure-blue);
+  color: var(--readme-link);
 }
 
 .repository-readme-content {
