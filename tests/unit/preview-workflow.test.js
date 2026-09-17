@@ -20,7 +20,13 @@ describe("PR preview workflow", () => {
     );
   });
 
-  test("deploys only same-repository changes but always allows cleanup", () => {
+  test("checks out the trusted base revision before cleanup", () => {
+    expect(workflow).toMatch(
+      /if: github\.event\.action == 'closed'[\s\S]*ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}[\s\S]*persist-credentials: false/
+    );
+  });
+
+  test("deploys only same-repository changes but allows cleanup for every PR", () => {
     expect(workflow).toContain(
       "if: github.event.action == 'closed' || github.event.pull_request.head.repo.full_name == github.repository"
     );

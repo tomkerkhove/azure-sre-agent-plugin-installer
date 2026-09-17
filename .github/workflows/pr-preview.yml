@@ -17,11 +17,18 @@ jobs:
     if: github.event.action == 'closed' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout pull request
         if: github.event.action != 'closed'
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Checkout base for cleanup
+        if: github.event.action == 'closed'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
 
       - name: Deploy or remove PR preview
