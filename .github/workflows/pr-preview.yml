@@ -24,3 +24,6 @@ jobs:
         with:
           source-dir: .
           action: auto
+          # Wait for the Pages deployment to finish before commenting, so the
+          # link posted on the PR is live by the time reviewers click it.
+          wait-for-pages-deployment: true
