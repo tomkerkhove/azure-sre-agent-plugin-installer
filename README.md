@@ -46,12 +46,16 @@ The agent selector needs a public Microsoft Entra single-page application:
 2. Add this **Single-page application** redirect URI:
   `https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/auth.html`.
 3. Add the **Azure Service Management** delegated `user_impersonation`
-  permission. The installer separately requests the Azure SRE Agent data plane
-  scope, `https://azuresre.dev/.default`, when the user confirms an install.
-  Tenant consent policies still apply.
-4. Add the app's client ID as the `AZURE_CLIENT_ID` repository variable under
+  permission.
+4. Add and grant tenant consent for the delegated Azure SRE Agent API
+  permission exposed for the `https://azuresre.dev` resource. The installer
+  requests its statically configured permissions with
+  `https://azuresre.dev/.default` when the user confirms an install. If the
+  Azure SRE Agent permission isn't available to the app registration, leave
+  online installation disabled and use the CLI or portal flow.
+5. Add the app's client ID as the `AZURE_CLIENT_ID` repository variable under
   **Settings > Secrets and variables > Actions > Variables**.
-5. Optionally add an `AZURE_TENANT_ID` repository variable containing a tenant
+6. Optionally add an `AZURE_TENANT_ID` repository variable containing a tenant
   ID for a single-tenant deployment. It defaults to `organizations`.
 
 A client ID and tenant ID are public configuration, not secrets. Do not create
