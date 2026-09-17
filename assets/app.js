@@ -32,6 +32,34 @@ let signedInAccount = null;
 const DEFAULT_THEME = "light";
 const SUPPORTED_THEMES = ["light", "dark"];
 
+// `path` comes from the query string, so it is untrusted input: keep it to a
+// conservative subset of characters before it is rendered or reported.
+function normalizePath(rawPath) {
+  if (!rawPath) return "";
+  const path = rawPath.trim().replace(/^\/+|\/+$/g, "");
+  if (!path || path.length > 200) return "";
+  if (!/^[\w.\-\/]+$/.test(path) || path.includes("..")) return "";
+  return path;
+}
+
+function track(name, properties) {
+  if (typeof window !== "undefined" && window.siteTelemetry) {
+    window.siteTelemetry.trackEvent(name, properties);
+  }
+}
+
+// Custom metric so plugin installs can be counted and split per repository in
+// Application Insights.
+function trackPluginInstall(repo, properties) {
+  if (typeof window !== "undefined" && window.siteTelemetry) {
+    window.siteTelemetry.trackMetric(
+      "PluginInstalls",
+      1,
+      Object.assign({ repository: repo }, properties || {})
+    );
+  }
+}
+
 function normalizeRepo(rawRepo) {
   if (!rawRepo) return null;
 
@@ -89,7 +117,9 @@ function initThemeToggle(initialTheme) {
 
   function updateToggle(theme) {
     const isDark = theme === "dark";
-    toggle.textContent = `Switch to ${isDark ? "light" : "dark"} theme`;
+    const label = `Switch to ${isDark ? "light" : "dark"} theme`;
+    toggle.setAttribute("aria-label", label);
+    toggle.setAttribute("title", label);
   }
 
   updateToggle(currentTheme);
@@ -842,8 +872,15 @@ function renderInstallCard(repo, path) {
   });
 
   const copyBtn = document.getElementById("copy-repo-btn");
+  const portalLink = container.querySelector(`a[href="${SRE_AGENT_PORTAL_URL}"]`);
   copyBtn.addEventListener("click", () => {
     copyToClipboard(repo).then(() => showToast("Repository copied to clipboard"));
+    track("PluginRepositoryCopied", { repository: repo, hasPath: Boolean(path) });
+    trackPluginInstall(repo, { hasPath: Boolean(path), step: "repository-copied" });
+  });
+
+  portalLink.addEventListener("click", () => {
+    track("AzureSreAgentOpened", { repository: repo });
   });
 
   container.hidden = false;
@@ -859,14 +896,24 @@ function initGenerator() {
     event.preventDefault();
 
     const repoInput = document.getElementById("gen-repo").value;
-    const pathInput = document.getElementById("gen-path").value.trim();
+    const rawPath = document.getElementById("gen-path").value.trim();
+    const pathInput = normalizePath(rawPath);
     const themeInput = document.getElementById("gen-theme");
     const repo = normalizeRepo(repoInput);
+
+    if (rawPath && !pathInput) {
+      output.hidden = false;
+      output.textContent =
+        "Please enter a valid path within the repository, e.g. plugins/my-plugin";
+      track("BadgeGenerationFailed", { reason: "invalid-path" });
+      return;
+    }
 
     if (!repo) {
       output.hidden = false;
       output.textContent =
         "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo";
+      track("BadgeGenerationFailed", { reason: "invalid-repository" });
       return;
     }
 
@@ -880,6 +927,8 @@ function initGenerator() {
 
     output.hidden = false;
     output.textContent = markdown;
+
+    track("BadgeGenerated", { hasPath: Boolean(pathInput) });
   });
 
   document.getElementById("copy-badge-btn").addEventListener("click", () => {
@@ -887,13 +936,14 @@ function initGenerator() {
     copyToClipboard(output.textContent).then(() =>
       showToast("Badge markdown copied to clipboard")
     );
+    track("BadgeMarkdownCopied");
   });
 }
 
 function init() {
   const params = new URLSearchParams(window.location.search);
   const repo = normalizeRepo(params.get("repo"));
-  const path = params.get("path") || "";
+  const path = normalizePath(params.get("path"));
 
   const theme = applyTheme(params.get("theme"));
   initThemeToggle(theme);
@@ -903,6 +953,14 @@ function init() {
   }
 
   initGenerator();
+
+  if (window.siteTelemetry) {
+    window.siteTelemetry.trackPageView({
+      scenario: repo ? "plugin-install" : "badge-generator",
+      repository: repo || "",
+      hasPath: Boolean(path),
+    });
+  }
 }
 
 if (typeof document !== "undefined") {
@@ -914,6 +972,7 @@ if (typeof document !== "undefined") {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     normalizeRepo,
+    normalizePath,
     normalizeTheme,
     applyTheme,
     buildInstallerUrl,

@@ -1,6 +1,6 @@
 # Azure SRE Agent Plugin Installer
 
-[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/?repo=tomkerkhove/azure-carbon-sre)
+[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/?repo=tomkerkhove/azure-carbon-sre)
 
 A "Deploy to Azure" button, but for [Azure SRE Agent](https://aka.ms/sreagent) plugins.
 
@@ -17,7 +17,7 @@ your plugin's GitHub repository (and an optional `path` if the plugin lives in
 a subfolder):
 
 ```markdown
-[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/?repo=owner/repo)
+[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/?repo=owner/repo)
 ```
 
 When someone clicks the badge, they land on a page that:
@@ -40,7 +40,7 @@ at the top of the page to switch between light and dark colors. Add `theme=dark`
 to the link to render it in a dark theme initially:
 
 ```markdown
-[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/?repo=owner/repo&theme=dark)
+[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/?repo=owner/repo&theme=dark)
 ```
 
 Any other value falls back to the light theme. The badge generator on the site
@@ -57,7 +57,7 @@ The agent selector needs a public Microsoft Entra single-page application:
   directory. For a tenant-specific deployment, use a single-tenant
   registration instead.
 2. Add this **Single-page application** redirect URI:
-  `https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/auth.html`.
+  `https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/auth.html`.
 3. Add the **Azure Service Management** delegated `user_impersonation`
   permission.
 4. Add and grant tenant consent for the delegated Azure SRE Agent API
@@ -115,6 +115,19 @@ npm run serve
 To test sign-in locally, add `http://127.0.0.1:4173/auth.html` as a
 single-page application redirect URI and set the client ID in
 `assets/config.js`.
+
+## PR previews
+
+[`.github/workflows/pr-preview.yml`](./.github/workflows/pr-preview.yml)
+automatically deploys a preview of the site for every pull request, so
+changes can be reviewed and tested live before merging. Each pull request is
+deployed to its own path
+(`https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/pr-preview/pr-<number>/`),
+so multiple PRs can have previews live at the same time without overwriting
+each other or the production site. The workflow posts a comment on the pull
+request with a link to the preview and updates that same comment every time
+new commits are pushed. The preview is removed automatically when the pull
+request is closed.
 
 ## Testing
 

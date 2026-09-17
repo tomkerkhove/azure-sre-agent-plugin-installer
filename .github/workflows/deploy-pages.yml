@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -16,34 +14,48 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v6
-
       - name: Build site
         run: |
           npm ci
           npm run build
+          rm -rf node_modules
 
-      - name: Configure Microsoft Entra authentication
+      - name: Configure site
         env:
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
         run: |
-          node -e 'const fs = require("node:fs"); const config = { clientId: process.env.AZURE_CLIENT_ID || "", tenantId: process.env.AZURE_TENANT_ID || "organizations", dataPlaneScope: "https://azuresre.dev/.default" }; fs.writeFileSync("assets/config.js", `window.SRE_AGENT_INSTALLER_CONFIG = Object.freeze(${JSON.stringify(config)});\n`);'
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: .
+          node --input-type=module -e '
+            import { writeFileSync } from "node:fs";
+            const installerConfig = {
+              clientId: process.env.AZURE_CLIENT_ID || "",
+              tenantId: process.env.AZURE_TENANT_ID || "organizations",
+              dataPlaneScope: "https://azuresre.dev/.default",
+            };
+            const siteConfig = {
+              telemetry: {
+                connectionString: process.env.CONNECTION_STRING || "",
+                cloudRole: "sre-agent-plugin-installer",
+              },
+            };
+            writeFileSync(
+              "assets/config.js",
+              `window.SRE_AGENT_INSTALLER_CONFIG = Object.freeze(${JSON.stringify(installerConfig, null, 2)});\n` +
+                `window.SITE_CONFIG = ${JSON.stringify(siteConfig, null, 2)};\n`
+            );
+          '
 
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          # Preserve PR preview directories deployed to the pr-preview/ folder
+          # of this same branch by pr-preview.yml.
+          keep_files: true

@@ -1,5 +1,5 @@
 {
-  "name": "tomkerkhove-azure-sre-agent-plugin-installer",
+  "name": "azure-sre-agent-plugin-installer",
   "version": "1.0.0",
   "private": true,
   "description": "A one-click installer for Azure SRE Agent plugins.",
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/tomkerkhove/tomkerkhove-azure-sre-agent-plugin-installer.git"
+    "url": "https://github.com/tomkerkhove/azure-sre-agent-plugin-installer.git"
   },
   "license": "MIT",
   "dependencies": {
