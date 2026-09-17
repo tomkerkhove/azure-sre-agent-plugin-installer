@@ -10,6 +10,7 @@ permissions:
 
 concurrency:
   group: pr-preview-${{ github.event.number }}
+  cancel-in-progress: true
 
 jobs:
   deploy-preview:
