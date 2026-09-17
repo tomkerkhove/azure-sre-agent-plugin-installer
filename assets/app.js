@@ -10,6 +10,8 @@
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
 const BADGE_IMAGE_URL =
   "https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white";
+const DEFAULT_THEME = "light";
+const SUPPORTED_THEMES = ["light", "dark"];
 
 // `path` comes from the query string, so it is untrusted input: keep it to a
 // conservative subset of characters before it is rendered or reported.
@@ -60,13 +62,33 @@ function normalizeRepo(rawRepo) {
   return repo;
 }
 
-function buildInstallerUrl(baseUrl, repo, path) {
+function normalizeTheme(rawTheme) {
+  if (typeof rawTheme !== "string") return DEFAULT_THEME;
+
+  const theme = rawTheme.trim().toLowerCase();
+  return SUPPORTED_THEMES.includes(theme) ? theme : DEFAULT_THEME;
+}
+
+function buildInstallerUrl(baseUrl, repo, path, theme) {
   const url = new URL(baseUrl);
   url.searchParams.set("repo", repo);
   if (path) {
     url.searchParams.set("path", path);
   }
+  // The default theme needs no query parameter, keeping generated links short.
+  const normalizedTheme = normalizeTheme(theme);
+  if (normalizedTheme !== DEFAULT_THEME) {
+    url.searchParams.set("theme", normalizedTheme);
+  }
   return url.toString();
+}
+
+function applyTheme(theme) {
+  const normalized = normalizeTheme(theme);
+  if (typeof document !== "undefined" && document.documentElement) {
+    document.documentElement.setAttribute("data-theme", normalized);
+  }
+  return normalized;
 }
 
 function buildBadgeMarkdown(installerUrl) {
@@ -218,6 +240,7 @@ function initGenerator() {
     const repoInput = document.getElementById("gen-repo").value;
     const rawPath = document.getElementById("gen-path").value.trim();
     const pathInput = normalizePath(rawPath);
+    const themeInput = document.getElementById("gen-theme");
     const repo = normalizeRepo(repoInput);
 
     if (rawPath && !pathInput) {
@@ -239,7 +262,8 @@ function initGenerator() {
     const installerUrl = buildInstallerUrl(
       window.location.origin + window.location.pathname,
       repo,
-      pathInput
+      pathInput,
+      themeInput ? themeInput.value : DEFAULT_THEME
     );
     const markdown = buildBadgeMarkdown(installerUrl);
 
@@ -262,6 +286,8 @@ function init() {
   const params = new URLSearchParams(window.location.search);
   const repo = normalizeRepo(params.get("repo"));
   const path = normalizePath(params.get("path"));
+
+  applyTheme(params.get("theme"));
 
   if (repo) {
     renderInstallCard(repo, path);
@@ -287,7 +313,11 @@ if (typeof document !== "undefined") {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     normalizeRepo,
+    normalizeTheme,
+    applyTheme,
     buildInstallerUrl,
     buildBadgeMarkdown,
+    DEFAULT_THEME,
+    SUPPORTED_THEMES,
   };
 }

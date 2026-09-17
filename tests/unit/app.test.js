@@ -1,4 +1,9 @@
-const { normalizeRepo, buildInstallerUrl, buildBadgeMarkdown } = require("../../assets/app.js");
+const {
+  normalizeRepo,
+  normalizeTheme,
+  buildInstallerUrl,
+  buildBadgeMarkdown,
+} = require("../../assets/app.js");
 
 describe("normalizeRepo", () => {
   test("returns null for empty/undefined input", () => {
@@ -52,6 +57,47 @@ describe("buildInstallerUrl", () => {
   test("omits the path query parameter when not provided", () => {
     const url = buildInstallerUrl("https://example.com/", "owner/repo", "");
     expect(url).toBe("https://example.com/?repo=owner%2Frepo");
+  });
+
+  test("includes the theme query parameter for the dark theme", () => {
+    const url = buildInstallerUrl("https://example.com/", "owner/repo", "", "dark");
+    expect(url).toBe("https://example.com/?repo=owner%2Frepo&theme=dark");
+  });
+
+  test("omits the theme query parameter for the default light theme", () => {
+    expect(buildInstallerUrl("https://example.com/", "owner/repo", "", "light")).toBe(
+      "https://example.com/?repo=owner%2Frepo"
+    );
+    expect(buildInstallerUrl("https://example.com/", "owner/repo")).toBe(
+      "https://example.com/?repo=owner%2Frepo"
+    );
+  });
+
+  test("omits the theme query parameter for an unsupported theme", () => {
+    const url = buildInstallerUrl("https://example.com/", "owner/repo", "", "neon");
+    expect(url).toBe("https://example.com/?repo=owner%2Frepo");
+  });
+});
+
+describe("normalizeTheme", () => {
+  test("defaults to the light theme", () => {
+    expect(normalizeTheme(undefined)).toBe("light");
+    expect(normalizeTheme(null)).toBe("light");
+    expect(normalizeTheme("")).toBe("light");
+  });
+
+  test("accepts the supported themes", () => {
+    expect(normalizeTheme("light")).toBe("light");
+    expect(normalizeTheme("dark")).toBe("dark");
+  });
+
+  test("is case-insensitive and trims whitespace", () => {
+    expect(normalizeTheme("  DARK ")).toBe("dark");
+  });
+
+  test("falls back to light for unsupported values", () => {
+    expect(normalizeTheme("neon")).toBe("light");
+    expect(normalizeTheme(42)).toBe("light");
   });
 });
 
