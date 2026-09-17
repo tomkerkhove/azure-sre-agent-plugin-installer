@@ -7,6 +7,20 @@
   --surface-alt: #f3f6fa;
   --border: #dfe4ec;
   --radius: 10px;
+  --button-secondary-hover: #e8ecf2;
+  --shadow: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] {
+  --azure-blue: #2899f5;
+  --azure-dark: #1b7fd1;
+  --ink: #e6edf3;
+  --muted: #9aa5b1;
+  --surface: #161b22;
+  --surface-alt: #0d1117;
+  --border: #30363d;
+  --button-secondary-hover: #21262d;
+  --shadow: rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -29,6 +43,18 @@ body {
   max-width: 760px;
   margin: 0 auto;
   padding: 48px 20px 80px;
+}
+
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  min-width: 158px;
+  justify-content: center;
 }
 
 header.hero {
@@ -56,7 +82,7 @@ header.hero p {
   border-radius: var(--radius);
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 2px var(--shadow);
 }
 
 .card h2 {
@@ -104,6 +130,7 @@ header.hero p {
 
 .copy-row input {
   flex: 1;
+  color: var(--ink);
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -146,11 +173,11 @@ button.secondary {
 }
 
 button.secondary:hover {
-  background: #e8ecf2;
+  background: var(--button-secondary-hover);
 }
 
 .btn.secondary:hover {
-  background: #e8ecf2;
+  background: var(--button-secondary-hover);
 }
 
 button:disabled {
@@ -188,6 +215,7 @@ button:disabled:hover {
   border-radius: 6px;
   font-size: 0.9rem;
   background: var(--surface);
+  color: var(--ink);
 }
 
 pre.output {
@@ -255,7 +283,7 @@ pre.output {
   left: 50%;
   transform: translateX(-50%);
   background: var(--ink);
-  color: #fff;
+  color: var(--surface);
   padding: 10px 18px;
   border-radius: 8px;
   opacity: 0;

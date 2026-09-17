@@ -1,2 +1,4 @@
 node_modules/
 assets/vendor/
+playwright-report/
+test-results/

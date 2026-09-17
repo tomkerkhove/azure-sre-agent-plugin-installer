@@ -1,11 +1,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const test = require("node:test");
 const vm = require("node:vm");
 
 const appSource = fs.readFileSync(
-  path.join(__dirname, "..", "assets", "app.js"),
+  path.join(__dirname, "..", "..", "assets", "app.js"),
   "utf8"
 );
 

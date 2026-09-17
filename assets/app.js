@@ -29,6 +29,8 @@ Resources
 
 let authClient = null;
 let signedInAccount = null;
+const DEFAULT_THEME = "light";
+const SUPPORTED_THEMES = ["light", "dark"];
 
 function normalizeRepo(rawRepo) {
   if (!rawRepo) return null;
@@ -51,13 +53,59 @@ function normalizeRepo(rawRepo) {
   return repo;
 }
 
-function buildInstallerUrl(baseUrl, repo, path) {
+function normalizeTheme(rawTheme) {
+  if (typeof rawTheme !== "string") return DEFAULT_THEME;
+
+  const theme = rawTheme.trim().toLowerCase();
+  return SUPPORTED_THEMES.includes(theme) ? theme : DEFAULT_THEME;
+}
+
+function buildInstallerUrl(baseUrl, repo, path, theme) {
   const url = new URL(baseUrl);
   url.searchParams.set("repo", repo);
   if (path) {
     url.searchParams.set("path", path);
   }
+  // The default theme needs no query parameter, keeping generated links short.
+  const normalizedTheme = normalizeTheme(theme);
+  if (normalizedTheme !== DEFAULT_THEME) {
+    url.searchParams.set("theme", normalizedTheme);
+  }
   return url.toString();
+}
+
+function applyTheme(theme) {
+  const normalized = normalizeTheme(theme);
+  if (typeof document !== "undefined" && document.documentElement) {
+    document.documentElement.setAttribute("data-theme", normalized);
+  }
+  return normalized;
+}
+
+function initThemeToggle(initialTheme) {
+  const toggle = document.getElementById("theme-toggle");
+  if (!toggle) return;
+  let currentTheme = initialTheme;
+
+  function updateToggle(theme) {
+    const isDark = theme === "dark";
+    toggle.textContent = `Switch to ${isDark ? "light" : "dark"} theme`;
+  }
+
+  updateToggle(currentTheme);
+  toggle.addEventListener("click", () => {
+    currentTheme = applyTheme(currentTheme === "dark" ? "light" : "dark");
+    const url = new URL(window.location.href);
+
+    if (currentTheme === DEFAULT_THEME) {
+      url.searchParams.delete("theme");
+    } else {
+      url.searchParams.set("theme", currentTheme);
+    }
+
+    window.history.replaceState(null, "", url);
+    updateToggle(currentTheme);
+  });
 }
 
 function buildBadgeMarkdown(installerUrl) {
@@ -812,6 +860,7 @@ function initGenerator() {
 
     const repoInput = document.getElementById("gen-repo").value;
     const pathInput = document.getElementById("gen-path").value.trim();
+    const themeInput = document.getElementById("gen-theme");
     const repo = normalizeRepo(repoInput);
 
     if (!repo) {
@@ -824,7 +873,8 @@ function initGenerator() {
     const installerUrl = buildInstallerUrl(
       window.location.origin + window.location.pathname,
       repo,
-      pathInput
+      pathInput,
+      themeInput ? themeInput.value : DEFAULT_THEME
     );
     const markdown = buildBadgeMarkdown(installerUrl);
 
@@ -845,6 +895,9 @@ function init() {
   const repo = normalizeRepo(params.get("repo"));
   const path = params.get("path") || "";
 
+  const theme = applyTheme(params.get("theme"));
+  initThemeToggle(theme);
+
   if (repo) {
     renderInstallCard(repo, path);
   }
@@ -852,4 +905,20 @@ function init() {
   initGenerator();
 }
 
-document.addEventListener("DOMContentLoaded", init);
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", init);
+}
+
+// Export pure functions for unit testing (Node/CommonJS) while keeping the
+// browser bundle dependency-free.
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    normalizeRepo,
+    normalizeTheme,
+    applyTheme,
+    buildInstallerUrl,
+    buildBadgeMarkdown,
+    DEFAULT_THEME,
+    SUPPORTED_THEMES,
+  };
+}

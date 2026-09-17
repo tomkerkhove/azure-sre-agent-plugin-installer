@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,6 +12,11 @@
 </head>
 <body>
   <div class="wrapper">
+    <div class="page-actions">
+      <button type="button" class="secondary theme-toggle" id="theme-toggle">
+        Switch to dark theme
+      </button>
+    </div>
     <header class="hero">
       <div class="badge-preview">
         <img
@@ -64,6 +69,14 @@
         <div class="field">
           <label for="gen-path">Path in repository (optional)</label>
           <input id="gen-path" type="text" placeholder="plugins/my-plugin" />
+        </div>
+        <div class="field">
+          <label for="gen-theme">Theme</label>
+          <select id="gen-theme">
+            <option value="light" selected>Light (default)</option>
+            <option value="dark">Dark</option>
+          </select>
+          <p class="hint">The theme is stored in the generated link, so visitors see the page in the theme you pick.</p>
         </div>
         <div class="actions">
           <button type="submit">Generate badge markdown</button>

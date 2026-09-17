@@ -33,6 +33,19 @@ When someone clicks the badge, they land on a page that:
    [Install from URL](https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url)
    flow and a generated Azure CLI command as alternatives.
 
+### Choosing a theme
+
+The page renders in a light theme by default. Visitors can use the theme button
+at the top of the page to switch between light and dark colors. Add `theme=dark`
+to the link to render it in a dark theme initially:
+
+```markdown
+[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/?repo=owner/repo&theme=dark)
+```
+
+Any other value falls back to the light theme. The badge generator on the site
+lets you pick the theme and includes it in the generated link.
+
 You can also use the **badge generator** on the site itself to build the
 Markdown snippet for your repository without crafting the URL by hand.
 
@@ -75,8 +88,8 @@ Azure CLI and portal alternatives.
 
 * [`index.html`](./index.html), [`assets/app.js`](./assets/app.js) and
   [`assets/style.css`](./assets/style.css) implement the static site.
-* The site reads the `repo` (and optional `path`) query string parameters at
-  page load and renders installation instructions accordingly.
+* The site reads the `repo` and optional `path` and `theme` query string
+  parameters at page load and renders installation instructions accordingly.
 * The online installer uses
   [`@azure/msal-browser`](https://www.npmjs.com/package/@azure/msal-browser)
   4 LTS with memory-only caching and popup interactions. Tokens remain in the
@@ -91,17 +104,50 @@ Azure CLI and portal alternatives.
 
 ## Local development
 
-Install dependencies, build the browser dependency, and serve the repository:
+Install dependencies, build the browser dependency, and serve the site:
 
 ```bash
 npm ci
 npm run build
-python3 -m http.server 8000
+npm run serve
 ```
 
-To test sign-in locally, add `http://localhost:8000/auth.html` as a
+To test sign-in locally, add `http://127.0.0.1:4173/auth.html` as a
 single-page application redirect URI and set the client ID in
-`assets/config.js`. Run `npm test` for the unit tests.
+`assets/config.js`.
+
+## Testing
+
+The site's logic and UI are covered by automated tests, run in CI via
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) on every push and
+pull request to `main`.
+
+Install dependencies first:
+
+```bash
+npm install
+```
+
+* **Unit tests** ([Jest](https://jestjs.io/)) cover the pure logic in
+  [`assets/app.js`](./assets/app.js), such as repository normalization and
+  badge URL/markdown generation and theme normalization:
+
+  ```bash
+  npm test
+  ```
+
+* **UI tests** ([Playwright](https://playwright.dev/)) exercise the site in a
+  real browser - covering the empty state, install card rendering, the badge
+  generator form, theme selection, and the copy-to-clipboard actions:
+
+  ```bash
+  npx playwright install --with-deps chromium
+  npm run test:e2e
+  ```
+
+Every behavior change - by humans or AI agents - must come with tests. See
+[`AGENTS.md`](./AGENTS.md) for the guidelines that agents contributing to this
+repository must follow.
 
 > **Note:** This project is not affiliated with or endorsed by Microsoft. It
 > only links to the official Azure SRE Agent portal and documentation to help
