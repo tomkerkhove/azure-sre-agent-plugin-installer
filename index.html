@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://img.shields.io; connect-src https://dc.services.visualstudio.com https://*.applicationinsights.azure.com https://*.monitor.azure.com https://*.applicationinsights.azure.cn https://*.monitor.azure.cn https://*.applicationinsights.azure.us https://*.monitor.azure.us; base-uri 'none'; form-action 'self'"
+  />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <title>Install to Azure SRE Agent</title>
   <meta
     name="description"
@@ -12,6 +17,11 @@
 </head>
 <body>
   <div class="wrapper">
+    <div class="page-actions">
+      <button type="button" class="secondary theme-toggle" id="theme-toggle">
+        Switch to dark theme
+      </button>
+    </div>
     <header class="hero">
       <div class="badge-preview">
         <img
@@ -82,6 +92,12 @@
     </section>
 
     <footer>
+      <p id="consent-manage" hidden>
+        <span id="consent-status"></span>
+        <a href="#" id="consent-change" hidden>Change privacy choice</a>
+        &middot;
+        <a href="https://github.com/tomkerkhove/tomkerkhove-azure-sre-agent-plugin-installer/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">Privacy statement</a>
+      </p>
       <p>
         Not affiliated with Microsoft. Built to help the
         <a href="https://aka.ms/sreagent" target="_blank" rel="noopener noreferrer">Azure SRE Agent</a>
@@ -92,6 +108,24 @@
 
   <div class="toast" id="toast"></div>
 
+  <div class="consent-banner" id="consent-banner" role="region" aria-live="polite" aria-label="Privacy choice" hidden>
+    <div class="consent-banner-text">
+      <strong>Help us improve this site?</strong>
+      <p>
+        We would like to collect pseudonymous usage analytics (pages viewed and which plugins are
+        installed) in Azure Application Insights. No cookies and no tracking across sites, and no
+        analytics are collected unless you agree. See our
+        <a href="https://github.com/tomkerkhove/tomkerkhove-azure-sre-agent-plugin-installer/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">privacy statement</a>.
+      </p>
+    </div>
+    <div class="consent-banner-actions">
+      <button type="button" id="consent-accept">Allow analytics</button>
+      <button type="button" class="secondary" id="consent-decline">Decline</button>
+    </div>
+  </div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/telemetry.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>

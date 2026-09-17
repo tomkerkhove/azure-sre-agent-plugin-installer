@@ -32,8 +32,9 @@ When someone clicks the badge, they land on a page that:
 
 ### Choosing a theme
 
-The page renders in a light theme by default. Add `theme=dark` to the link to
-render it in a dark theme instead:
+The page renders in a light theme by default. Visitors can use the theme button
+at the top of the page to switch between light and dark colors. Add `theme=dark`
+to the link to render it in a dark theme initially:
 
 ```markdown
 [![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/?repo=owner/repo&theme=dark)
