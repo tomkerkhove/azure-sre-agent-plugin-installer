@@ -3,6 +3,7 @@ const {
   normalizeTheme,
   buildInstallerUrl,
   buildBadgeMarkdown,
+  buildRepositoryReadmeApiUrl,
 } = require("../../assets/app.js");
 
 describe("normalizeRepo", () => {
@@ -106,5 +107,13 @@ describe("buildBadgeMarkdown", () => {
     const markdown = buildBadgeMarkdown("https://example.com/?repo=owner%2Frepo");
     expect(markdown).toContain("[![Install to Azure SRE Agent]");
     expect(markdown).toContain("(https://example.com/?repo=owner%2Frepo)");
+  });
+});
+
+describe("buildRepositoryReadmeApiUrl", () => {
+  test("builds the GitHub rendered README endpoint", () => {
+    expect(buildRepositoryReadmeApiUrl("tomkerkhove/azure-carbon-sre")).toBe(
+      "https://api.github.com/repos/tomkerkhove/azure-carbon-sre/readme"
+    );
   });
 });

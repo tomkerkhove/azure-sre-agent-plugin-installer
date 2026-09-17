@@ -130,6 +130,103 @@ header.hero p {
   color: var(--azure-blue);
 }
 
+.repository-readme {
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+  padding-top: 20px;
+}
+
+.repository-readme-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.repository-readme-header h3 {
+  margin-top: 0;
+}
+
+.repository-readme-header a,
+.repository-readme-content a {
+  color: var(--azure-blue);
+}
+
+.repository-readme-content {
+  max-height: 28rem;
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-alt);
+  font-size: 0.9rem;
+}
+
+.repository-readme-content > :first-child {
+  margin-top: 0;
+}
+
+.repository-readme-content > :last-child {
+  margin-bottom: 0;
+}
+
+.repository-readme-content h1,
+.repository-readme-content h2 {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.repository-readme-content h1 {
+  font-size: 1.45rem;
+}
+
+.repository-readme-content h2 {
+  font-size: 1.2rem;
+}
+
+.repository-readme-content h3 {
+  margin-top: 20px;
+}
+
+.repository-readme-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.repository-readme-content pre {
+  overflow: auto;
+  padding: 12px;
+  border-radius: 6px;
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+.repository-readme-content :not(pre) > code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--border);
+}
+
+.repository-readme-content table {
+  display: block;
+  max-width: 100%;
+  overflow: auto;
+  border-spacing: 0;
+}
+
+.repository-readme-content th,
+.repository-readme-content td {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+}
+
+.repository-readme-content blockquote {
+  margin-left: 0;
+  padding-left: 14px;
+  border-left: 4px solid var(--border);
+  color: var(--muted);
+}
+
 .steps {
   padding-left: 20px;
   margin: 0;

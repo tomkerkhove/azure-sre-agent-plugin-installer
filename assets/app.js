@@ -12,6 +12,7 @@ const SRE_AGENT_API_DOCS_URL =
   "https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url#use-the-rest-api";
 const BADGE_IMAGE_URL =
   "https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white";
+const GITHUB_API_URL = "https://api.github.com";
 const MANAGEMENT_SCOPE =
   "https://management.azure.com/user_impersonation";
 const RESOURCE_GRAPH_URL =
@@ -31,6 +32,54 @@ let authClient = null;
 let signedInAccount = null;
 const DEFAULT_THEME = "light";
 const SUPPORTED_THEMES = ["light", "dark"];
+const README_ALLOWED_ELEMENTS = new Set([
+  "a",
+  "blockquote",
+  "br",
+  "code",
+  "del",
+  "details",
+  "div",
+  "em",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "hr",
+  "img",
+  "li",
+  "ol",
+  "p",
+  "pre",
+  "span",
+  "strong",
+  "sub",
+  "summary",
+  "sup",
+  "table",
+  "tbody",
+  "td",
+  "th",
+  "thead",
+  "tr",
+  "ul",
+]);
+const README_DISCARDED_ELEMENTS = new Set([
+  "button",
+  "embed",
+  "form",
+  "iframe",
+  "input",
+  "link",
+  "meta",
+  "object",
+  "script",
+  "style",
+  "svg",
+  "template",
+]);
 
 // `path` comes from the query string, so it is untrusted input: keep it to a
 // conservative subset of characters before it is rendered or reported.
@@ -151,6 +200,127 @@ function escapeHtml(value) {
     "'": "&#039;",
   };
   return String(value).replace(/[&<>"']/g, (character) => characters[character]);
+}
+
+function buildRepositoryReadmeApiUrl(repo) {
+  const [owner, name] = repo.split("/");
+  return `${GITHUB_API_URL}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/readme`;
+}
+
+function sanitizeRepositoryReadmeHtml(markup, repo) {
+  const template = document.createElement("template");
+  const repoUrl = `https://github.com/${repo}`;
+  template.innerHTML = markup;
+
+  Array.from(template.content.querySelectorAll("*")).forEach((element) => {
+    const tagName = element.tagName.toLowerCase();
+
+    if (README_DISCARDED_ELEMENTS.has(tagName)) {
+      element.remove();
+      return;
+    }
+
+    if (!README_ALLOWED_ELEMENTS.has(tagName)) {
+      element.replaceWith(...Array.from(element.childNodes));
+      return;
+    }
+
+    const href = element.getAttribute("href");
+    const src = element.getAttribute("src");
+    const alt = element.getAttribute("alt");
+    const title = element.getAttribute("title");
+    const width = element.getAttribute("width");
+    const height = element.getAttribute("height");
+    const colspan = element.getAttribute("colspan");
+    const rowspan = element.getAttribute("rowspan");
+    const isOpen = element.hasAttribute("open");
+
+    Array.from(element.attributes).forEach((attribute) => {
+      element.removeAttribute(attribute.name);
+    });
+
+    if (tagName === "a" && href) {
+      try {
+        const target = new URL(
+          href.startsWith("#") ? `${repoUrl}${href}` : href,
+          `${repoUrl}/`
+        );
+        if (target.protocol === "https:") {
+          element.setAttribute("href", target.toString());
+          element.setAttribute("target", "_blank");
+          element.setAttribute("rel", "noopener noreferrer");
+          if (title) element.setAttribute("title", title);
+        }
+      } catch (_error) {
+        // Leave malformed links as plain text.
+      }
+    }
+
+    if (tagName === "img") {
+      let target;
+      try {
+        target = new URL(src, `${repoUrl}/`);
+      } catch (_error) {
+        element.remove();
+        return;
+      }
+
+      const isAllowedHost =
+        target.hostname === "github.com" ||
+        target.hostname === "img.shields.io" ||
+        target.hostname.endsWith(".githubusercontent.com");
+      if (target.protocol !== "https:" || !isAllowedHost) {
+        element.remove();
+        return;
+      }
+
+      element.setAttribute("src", target.toString());
+      element.setAttribute("alt", alt || "");
+      element.setAttribute("loading", "lazy");
+      element.setAttribute("referrerpolicy", "no-referrer");
+      if (title) element.setAttribute("title", title);
+      if (/^\d{1,4}$/.test(width || "")) element.setAttribute("width", width);
+      if (/^\d{1,4}$/.test(height || "")) element.setAttribute("height", height);
+    }
+
+    if (tagName === "details" && isOpen) element.setAttribute("open", "");
+    if (["td", "th"].includes(tagName)) {
+      if (/^\d{1,2}$/.test(colspan || "")) element.setAttribute("colspan", colspan);
+      if (/^\d{1,2}$/.test(rowspan || "")) element.setAttribute("rowspan", rowspan);
+    }
+  });
+
+  return template.innerHTML;
+}
+
+async function loadRepositoryReadme(repo) {
+  const content = document.getElementById("repository-readme-content");
+  const status = document.getElementById("repository-readme-status");
+  if (!content || !status) return;
+
+  try {
+    const response = await fetch(buildRepositoryReadmeApiUrl(repo), {
+      credentials: "omit",
+      headers: {
+        Accept: "application/vnd.github.html+json",
+      },
+      referrerPolicy: "no-referrer",
+    });
+    if (!response.ok) throw new Error("README request failed");
+
+    const sanitizedMarkup = sanitizeRepositoryReadmeHtml(
+      await response.text(),
+      repo
+    );
+    if (!sanitizedMarkup.trim()) throw new Error("README is empty");
+
+    content.innerHTML = sanitizedMarkup;
+    content.hidden = false;
+    status.hidden = true;
+  } catch (_error) {
+    status.textContent =
+      "The README preview is unavailable. View it on GitHub instead.";
+  }
 }
 
 function normalizeAgentEndpoint(rawEndpoint) {
@@ -760,6 +930,14 @@ function renderInstallCard(repo, path) {
           : ""
       }
     </dl>
+    <section class="repository-readme" aria-labelledby="repository-readme-heading">
+      <div class="repository-readme-header">
+        <h3 id="repository-readme-heading">Repository README</h3>
+        <a href="${repoUrl}" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+      </div>
+      <p id="repository-readme-status" class="hint" role="status">Loading README…</p>
+      <div id="repository-readme-content" class="repository-readme-content" hidden></div>
+    </section>
     <div class="online-installer">
       <h3>Choose an Azure SRE Agent</h3>
       <p>
@@ -837,6 +1015,7 @@ function renderInstallCard(repo, path) {
   `;
 
   initOnlineInstaller(repo, path);
+  loadRepositoryReadme(repo);
 
   const importForm = document.getElementById("api-import-form");
   const importOutput = document.getElementById("import-output");
@@ -977,6 +1156,8 @@ if (typeof module !== "undefined" && module.exports) {
     applyTheme,
     buildInstallerUrl,
     buildBadgeMarkdown,
+    buildRepositoryReadmeApiUrl,
+    sanitizeRepositoryReadmeHtml,
     DEFAULT_THEME,
     SUPPORTED_THEMES,
   };

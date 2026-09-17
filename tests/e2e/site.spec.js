@@ -1,6 +1,12 @@
 const { test, expect } = require("@playwright/test");
 
 test.describe("Install to Azure SRE Agent site", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route("https://api.github.com/**", async (route) => {
+      await route.fulfill({ status: 404, body: "{}" });
+    });
+  });
+
   test("shows the empty state when no repo is specified", async ({ page }) => {
     await page.goto("/");
 
@@ -44,6 +50,50 @@ test.describe("Install to Azure SRE Agent site", () => {
     const installCard = page.locator("#install-card");
     await expect(installCard.locator("dt", { hasText: "Path in repository" })).toBeVisible();
     await expect(installCard.locator("dd code")).toHaveText("plugins/my-plugin");
+  });
+
+  test("renders the repository README in the install card", async ({ page }) => {
+    await page.route(
+      "https://api.github.com/repos/tomkerkhove/azure-carbon-sre/readme",
+      async (route) => {
+        expect(route.request().headers().accept).toBe(
+          "application/vnd.github.html+json"
+        );
+        await route.fulfill({
+          status: 200,
+          contentType: "text/html",
+          body: `
+            <h1>Azure Carbon SRE</h1>
+            <p>An Azure SRE Agent plugin marketplace.</p>
+            <h2>Included plugin</h2>
+            <table><tbody><tr><td><code>azure-carbon-sre</code></td></tr></tbody></table>
+          `,
+        });
+      }
+    );
+
+    await page.goto("/?repo=tomkerkhove/azure-carbon-sre");
+
+    const readme = page.locator("#repository-readme-content");
+    await expect(page.locator("#repository-readme-heading")).toHaveText(
+      "Repository README"
+    );
+    await expect(readme).toBeVisible();
+    await expect(readme.locator("h1")).toHaveText("Azure Carbon SRE");
+    await expect(readme.locator("table code")).toHaveText("azure-carbon-sre");
+    await expect(page.locator("#repository-readme-status")).toBeHidden();
+  });
+
+  test("keeps the GitHub fallback when the README cannot be loaded", async ({ page }) => {
+    await page.goto("/?repo=owner/missing-readme");
+
+    await expect(page.locator("#repository-readme-status")).toHaveText(
+      "The README preview is unavailable. View it on GitHub instead."
+    );
+    await expect(page.locator("#repository-readme-content")).toBeHidden();
+    await expect(
+      page.locator(".repository-readme a", { hasText: "View on GitHub" })
+    ).toHaveAttribute("href", "https://github.com/owner/missing-readme");
   });
 
   test("normalizes a full GitHub URL passed as the repo parameter", async ({ page }) => {
