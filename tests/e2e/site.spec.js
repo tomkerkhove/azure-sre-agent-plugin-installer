@@ -38,6 +38,39 @@ test.describe("Install to Azure SRE Agent site", () => {
     ]);
   });
 
+  test("generates an Azure CLI import command", async ({ page }) => {
+    await page.goto("/?repo=owner/repo&path=plugins/my-plugin");
+
+    await page.locator("#agent-endpoint").fill(
+      "https://demo.hash.eastus.azuresre.ai"
+    );
+    await page.locator("#api-import-form button[type=submit]").click();
+
+    const output = page.locator("#import-output");
+    await expect(output).toBeVisible();
+    await expect(output).toContainText(
+      "--url 'https://demo.hash.eastus.azuresre.ai/api/v2/plugins/install-direct'"
+    );
+    await expect(output).toContainText(
+      `--data '{"sourceUrl":"owner/repo","pathInRepo":"plugins/my-plugin"}'`
+    );
+    await expect(page.locator("#copy-import-btn")).toBeEnabled();
+  });
+
+  test("rejects an invalid Azure SRE Agent endpoint", async ({ page }) => {
+    await page.goto("/?repo=owner/repo");
+
+    await page.locator("#agent-endpoint").fill(
+      "https://demo.azuresre.ai.attacker.example"
+    );
+    await page.locator("#api-import-form button[type=submit]").click();
+
+    await expect(page.locator("#import-output")).toHaveText(
+      "Enter a valid Azure SRE Agent endpoint ending in .azuresre.ai."
+    );
+    await expect(page.locator("#copy-import-btn")).toBeDisabled();
+  });
+
   test("shows the path in repository when the path query parameter is provided", async ({ page }) => {
     await page.goto("/?repo=owner/repo&path=plugins/my-plugin");
 
