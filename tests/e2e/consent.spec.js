@@ -130,6 +130,34 @@ test.describe("Privacy consent", () => {
     expect(metric.data.baseData.properties.repository).toBe("owner/repo");
   });
 
+  test("reports badge generation and copy events", async ({ page, context }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+
+    await page.goto("/");
+    await page.locator("#consent-accept").click();
+    await page.locator("#gen-repo").fill("owner/repo");
+    await page.locator("#gen-path").fill("plugins/my-plugin");
+    await page.locator("#generator-form button[type=submit]").click();
+    await page.locator("#copy-badge-btn").click();
+
+    await expect
+      .poll(
+        () =>
+          envelopes(ingestionRequests)
+            .filter((envelope) => envelope.data.baseType === "EventData")
+            .map((envelope) => envelope.data.baseData.name),
+        { timeout: 5000 }
+      )
+      .toEqual(expect.arrayContaining(["BadgeGenerated", "BadgeMarkdownCopied"]));
+
+    const badgeGenerated = envelopes(ingestionRequests).find(
+      (envelope) => envelope.data.baseData.name === "BadgeGenerated"
+    );
+    expect(badgeGenerated.data.baseData.properties.hasPath).toBe("true");
+  });
+
   test("collects nothing when the visitor declines", async ({ page }) => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);

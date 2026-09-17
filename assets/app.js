@@ -933,10 +933,10 @@ function initGenerator() {
 
   document.getElementById("copy-badge-btn").addEventListener("click", () => {
     if (!output.textContent) return;
-    copyToClipboard(output.textContent).then(() =>
-      showToast("Badge markdown copied to clipboard")
-    );
-    track("BadgeMarkdownCopied");
+    copyToClipboard(output.textContent).then(() => {
+      showToast("Badge markdown copied to clipboard");
+      track("BadgeMarkdownCopied");
+    });
   });
 }
 
