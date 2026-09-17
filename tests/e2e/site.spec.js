@@ -91,12 +91,12 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.goto("/?repo=owner/repo");
 
     const toggle = page.locator("#theme-toggle");
-    await expect(toggle).toHaveText("Dark theme");
+    await expect(toggle).toHaveText("Switch to dark theme");
 
     await toggle.click();
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(toggle).toHaveText("Light theme");
+    await expect(toggle).toHaveText("Switch to light theme");
     await expect(page).toHaveURL(/repo=owner%2Frepo&theme=dark$/);
 
     await toggle.click();

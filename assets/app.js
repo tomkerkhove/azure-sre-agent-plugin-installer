@@ -70,7 +70,7 @@ function initThemeToggle(initialTheme) {
 
   function updateToggle(theme) {
     const isDark = theme === "dark";
-    toggle.textContent = isDark ? "Light theme" : "Dark theme";
+    toggle.textContent = `Switch to ${isDark ? "light" : "dark"} theme`;
   }
 
   updateToggle(currentTheme);
