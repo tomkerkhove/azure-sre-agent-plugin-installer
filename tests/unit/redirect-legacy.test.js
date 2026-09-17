@@ -28,4 +28,11 @@ describe("buildInstallPageRedirectUrl", () => {
     const url = buildInstallPageRedirectUrl("https://example.com/");
     expect(url).toBe("https://example.com/install.html");
   });
+
+  test("preserves a URL fragment", () => {
+    const url = buildInstallPageRedirectUrl(
+      "https://example.com/?repo=owner%2Frepo#section"
+    );
+    expect(url).toBe("https://example.com/install.html?repo=owner%2Frepo#section");
+  });
 });

@@ -25,6 +25,7 @@ function buildInstallPageRedirectUrl(currentHref) {
   const current = new URL(currentHref);
   const target = new URL(getInstallPageUrl(current.href));
   target.search = current.search;
+  target.hash = current.hash;
   return target.toString();
 }
 
