@@ -26,6 +26,12 @@ const server = http.createServer((req, res) => {
   }
   let filePath = path.join(ROOT, urlPath === "/" ? "index.html" : urlPath);
 
+  if (urlPath.includes("\0")) {
+    res.writeHead(400, { "Content-Type": "text/plain" });
+    res.end("Bad request");
+    return;
+  }
+
   const relative = path.relative(ROOT, filePath);
   if (relative.startsWith("..") || path.isAbsolute(relative)) {
     res.writeHead(403);
@@ -45,6 +51,6 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, "127.0.0.1", () => {
   console.log(`Static server listening on http://127.0.0.1:${PORT}`);
 });
