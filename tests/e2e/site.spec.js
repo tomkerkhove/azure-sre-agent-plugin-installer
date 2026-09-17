@@ -60,15 +60,23 @@ test.describe("Install to Azure SRE Agent site", () => {
   test("rejects an invalid Azure SRE Agent endpoint", async ({ page }) => {
     await page.goto("/?repo=owner/repo");
 
-    await page.locator("#agent-endpoint").fill(
-      "https://demo.azuresre.ai.attacker.example"
+    const endpointInput = page.locator("#agent-endpoint");
+    const submitButton = page.locator(
+      "#api-import-form button[type=submit]"
     );
-    await page.locator("#api-import-form button[type=submit]").click();
+    const copyButton = page.locator("#copy-import-btn");
+
+    await endpointInput.fill("https://demo.hash.eastus.azuresre.ai");
+    await submitButton.click();
+    await expect(copyButton).toBeEnabled();
+
+    await endpointInput.fill("https://demo.azuresre.ai.attacker.example");
+    await submitButton.click();
 
     await expect(page.locator("#import-output")).toHaveText(
       "Enter a valid Azure SRE Agent endpoint ending in .azuresre.ai."
     );
-    await expect(page.locator("#copy-import-btn")).toBeDisabled();
+    await expect(copyButton).toBeDisabled();
   });
 
   test("shows the path in repository when the path query parameter is provided", async ({ page }) => {
