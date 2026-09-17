@@ -24,11 +24,14 @@ When someone clicks the badge, they land on a page that:
 
 1. Shows information about your plugin (source repository and, if provided,
    the path within the repository).
-2. Walks them through the official
+2. Generates an Azure CLI command that uses the official
+   [`POST /api/v2/plugins/install-direct`](https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url#use-the-rest-api)
+   endpoint to import the plugin directly.
+3. Provides the official
    [Install from URL](https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url)
-   flow in the Azure portal.
-3. Provides a copy-to-clipboard shortcut for the repository reference they
-   need to paste into their Azure SRE Agent instance.
+   flow in the Azure portal as a manual alternative.
+4. Provides copy-to-clipboard shortcuts for the generated import command and
+   repository reference.
 
 You can also use the **badge generator** on the site itself to build the
 Markdown snippet for your repository without crafting the URL by hand.
@@ -38,7 +41,9 @@ Markdown snippet for your repository without crafting the URL by hand.
 * [`index.html`](./index.html), [`assets/app.js`](./assets/app.js) and
   [`assets/style.css`](./assets/style.css) implement the static site.
 * The site reads the `repo` (and optional `path`) query string parameters at
-  page load and renders installation instructions accordingly - no backend or
+  page load and renders installation instructions accordingly.
+* API-assisted imports run through the visitor's local Azure CLI session, so
+  access tokens are never entered into or stored by the site. No backend or
   build step is required.
 * [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml)
   publishes the site to GitHub Pages on every push to `main` or on demand.

@@ -8,6 +8,8 @@
 // Reference: https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url
 
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
+const SRE_AGENT_API_DOCS_URL =
+  "https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url#use-the-rest-api";
 const BADGE_IMAGE_URL =
   "https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white";
 
@@ -45,6 +47,67 @@ function buildBadgeMarkdown(installerUrl) {
   return `[![Install to Azure SRE Agent](${BADGE_IMAGE_URL})](${installerUrl})`;
 }
 
+function escapeHtml(value) {
+  const characters = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  };
+  return String(value).replace(/[&<>"']/g, (character) => characters[character]);
+}
+
+function normalizeAgentEndpoint(rawEndpoint) {
+  if (!rawEndpoint) return null;
+
+  try {
+    const endpoint = new URL(rawEndpoint.trim());
+    const isAgentHost = endpoint.hostname
+      .toLowerCase()
+      .endsWith(".azuresre.ai");
+
+    if (
+      endpoint.protocol !== "https:" ||
+      !isAgentHost ||
+      endpoint.port ||
+      endpoint.username ||
+      endpoint.password ||
+      endpoint.pathname !== "/" ||
+      endpoint.search ||
+      endpoint.hash
+    ) {
+      return null;
+    }
+
+    return endpoint.origin;
+  } catch {
+    return null;
+  }
+}
+
+function shellQuote(value) {
+  return "'" + value.replace(/'/g, "'\"'\"'") + "'";
+}
+
+function buildImportCommand(endpoint, repo, path) {
+  const requestBody = JSON.stringify({
+    sourceUrl: repo,
+    pathInRepo: path,
+  });
+
+  return `TOKEN=$(az account get-access-token \\
+  --resource https://azuresre.dev \\
+  --query accessToken \\
+  --output tsv)
+
+curl --fail-with-body --request POST \\
+  --url ${shellQuote(`${endpoint}/api/v2/plugins/install-direct`)} \\
+  --oauth2-bearer "$TOKEN" \\
+  --header "Content-Type: application/json" \\
+  --data ${shellQuote(requestBody)}`;
+}
+
 function showToast(message) {
   const toast = document.getElementById("toast");
   if (!toast) return;
@@ -79,6 +142,7 @@ function renderInstallCard(repo, path) {
   if (!container) return;
 
   const repoUrl = `https://github.com/${repo}`;
+  const safePath = escapeHtml(path);
 
   container.innerHTML = `
     <h2>Install <span>${repo}</span> to your Azure SRE Agent</h2>
@@ -87,10 +151,39 @@ function renderInstallCard(repo, path) {
       <dd><a href="${repoUrl}" target="_blank" rel="noopener noreferrer">${repoUrl}</a></dd>
       ${
         path
-          ? `<dt>Path in repository</dt><dd><code>${path}</code></dd>`
+          ? `<dt>Path in repository</dt><dd><code>${safePath}</code></dd>`
           : ""
       }
     </dl>
+    <h3>Install with the REST API</h3>
+    <p>
+      Enter your agent's data plane endpoint to generate an Azure CLI command that
+      imports this plugin directly.
+    </p>
+    <form id="api-import-form">
+      <div class="field">
+        <label for="agent-endpoint">Azure SRE Agent endpoint</label>
+        <input
+          id="agent-endpoint"
+          type="url"
+          placeholder="https://your-agent...azuresre.ai"
+          autocomplete="url"
+          required
+        />
+      </div>
+      <div class="actions">
+        <button type="submit">Generate import command</button>
+        <button type="button" class="secondary" id="copy-import-btn" disabled>Copy command</button>
+      </div>
+    </form>
+    <pre class="output" id="import-output" aria-live="polite" hidden></pre>
+    <p class="hint">
+      The agent must be running, and you need the SRE Agent Author or Administrator role.
+      The command uses the
+      <a href="${SRE_AGENT_API_DOCS_URL}" target="_blank" rel="noopener noreferrer">preview plugin import API</a>
+      and gets a short-lived token through your Azure CLI session.
+    </p>
+    <h3>Or install in the Azure portal</h3>
     <ol class="steps">
       <li>Open your <strong>Azure SRE Agent</strong> instance in the Azure portal.</li>
       <li>Go to <strong>Builder &gt; Plugins</strong>, then choose <strong>Install from URL</strong>.</li>
@@ -106,6 +199,39 @@ function renderInstallCard(repo, path) {
       <a class="btn secondary" href="${repoUrl}" target="_blank" rel="noopener noreferrer">View plugin source</a>
     </div>
   `;
+
+  const importForm = document.getElementById("api-import-form");
+  const importOutput = document.getElementById("import-output");
+  const copyImportBtn = document.getElementById("copy-import-btn");
+  let importCommand = "";
+
+  importForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const endpoint = normalizeAgentEndpoint(
+      document.getElementById("agent-endpoint").value
+    );
+
+    importOutput.hidden = false;
+    if (!endpoint) {
+      importCommand = "";
+      copyImportBtn.disabled = true;
+      importOutput.textContent =
+        "Enter a valid Azure SRE Agent endpoint ending in .azuresre.ai.";
+      return;
+    }
+
+    importCommand = buildImportCommand(endpoint, repo, path);
+    importOutput.textContent = importCommand;
+    copyImportBtn.disabled = false;
+  });
+
+  copyImportBtn.addEventListener("click", () => {
+    if (!importCommand) return;
+    copyToClipboard(importCommand).then(() =>
+      showToast("Import command copied to clipboard")
+    );
+  });
 
   const copyBtn = document.getElementById("copy-repo-btn");
   copyBtn.addEventListener("click", () => {

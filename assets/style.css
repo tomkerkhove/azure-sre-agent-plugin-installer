@@ -60,6 +60,11 @@ header.hero p {
   font-size: 1.15rem;
 }
 
+.card h3 {
+  margin: 24px 0 8px;
+  font-size: 1rem;
+}
+
 .plugin-meta dt {
   font-weight: 600;
   color: var(--muted);
@@ -132,6 +137,15 @@ button.secondary {
 
 button.secondary:hover {
   background: #e8ecf2;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+button:disabled:hover {
+  background: var(--surface-alt);
 }
 
 .actions {
