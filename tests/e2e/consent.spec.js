@@ -130,6 +130,36 @@ test.describe("Privacy consent", () => {
     expect(metric.data.baseData.properties.repository).toBe("owner/repo");
   });
 
+  test("does not report repository copying when clipboard writing fails", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: () => Promise.reject(new Error("Clipboard unavailable")),
+        },
+      });
+    });
+
+    await page.goto("/?repo=owner/repo");
+    await page.locator("#consent-accept").click();
+    await page.locator("#copy-repo-btn").click();
+    await page.waitForTimeout(250);
+
+    expect(
+      envelopes(ingestionRequests).some(
+        (envelope) => envelope.data.baseData.name === "PluginRepositoryCopied"
+      )
+    ).toBe(false);
+    expect(
+      envelopes(ingestionRequests).some(
+        (envelope) => envelope.data.baseType === "MetricData"
+      )
+    ).toBe(false);
+    await expect(page.locator("#toast")).not.toHaveClass(/visible/);
+  });
+
   test("reports badge generation and copy events", async ({ page, context }) => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
