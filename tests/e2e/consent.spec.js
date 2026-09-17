@@ -104,9 +104,10 @@ test.describe("Privacy consent", () => {
     expect(pageView.data.baseData.properties.repository).toBe("owner/repo");
   });
 
-  test("reports the plugin install metric with the repository name", async ({ page }) => {
+  test("reports the plugin install metric with the repository name", async ({ page, context }) => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
     await page.goto("/?repo=owner/repo");
     await page.locator("#consent-accept").click();
@@ -128,6 +129,127 @@ test.describe("Privacy consent", () => {
     expect(metric.data.baseData.metrics[0].name).toBe("PluginInstalls");
     expect(metric.data.baseData.metrics[0].value).toBe(1);
     expect(metric.data.baseData.properties.repository).toBe("owner/repo");
+  });
+
+  test("does not report repository copying when clipboard writing fails", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: () => Promise.reject(new Error("Clipboard unavailable")),
+        },
+      });
+    });
+
+    await page.goto("/?repo=owner/repo");
+    await page.locator("#consent-accept").click();
+    await page.locator("#copy-repo-btn").click();
+    await page.waitForTimeout(250);
+
+    expect(
+      envelopes(ingestionRequests).some(
+        (envelope) => envelope.data.baseData.name === "PluginRepositoryCopied"
+      )
+    ).toBe(false);
+    expect(
+      envelopes(ingestionRequests).some(
+        (envelope) => envelope.data.baseType === "MetricData"
+      )
+    ).toBe(false);
+    await expect(page.locator("#toast")).not.toHaveClass(/visible/);
+  });
+
+  test("reports badge generation and copy events", async ({ page, context }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+
+    await page.goto("/");
+    await page.locator("#consent-accept").click();
+    await page.locator("#gen-repo").fill("owner/repo");
+    await page.locator("#gen-path").fill("plugins/my-plugin");
+    await page.locator("#generator-form button[type=submit]").click();
+    await page.locator("#copy-badge-btn").click();
+
+    await expect
+      .poll(
+        () =>
+          envelopes(ingestionRequests)
+            .filter((envelope) => envelope.data.baseType === "EventData")
+            .map((envelope) => envelope.data.baseData.name),
+        { timeout: 5000 }
+      )
+      .toEqual(expect.arrayContaining(["BadgeGenerated", "BadgeMarkdownCopied"]));
+
+    const badgeGenerated = envelopes(ingestionRequests).find(
+      (envelope) => envelope.data.baseData.name === "BadgeGenerated"
+    );
+    expect(badgeGenerated.data.baseData.properties.hasPath).toBe("true");
+  });
+
+  test("does not report a badge copy event when clipboard writing fails", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: () => Promise.reject(new Error("Clipboard unavailable")),
+        },
+      });
+    });
+
+    await page.goto("/");
+    await page.locator("#consent-accept").click();
+    await page.locator("#gen-repo").fill("owner/repo");
+    await page.locator("#generator-form button[type=submit]").click();
+    await expect
+      .poll(
+        () =>
+          envelopes(ingestionRequests).some(
+            (envelope) => envelope.data.baseData.name === "BadgeGenerated"
+          ),
+        { timeout: 5000 }
+      )
+      .toBe(true);
+
+    await page.locator("#copy-badge-btn").click();
+    await page.waitForTimeout(250);
+
+    expect(
+      envelopes(ingestionRequests).some(
+        (envelope) => envelope.data.baseData.name === "BadgeMarkdownCopied"
+      )
+    ).toBe(false);
+    await expect(page.locator("#toast")).not.toHaveClass(/visible/);
+  });
+
+  test("does not report a badge copy event when the fallback copy fails", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: undefined,
+      });
+      document.execCommand = () => false;
+    });
+
+    await page.goto("/");
+    await page.locator("#consent-accept").click();
+    await page.locator("#gen-repo").fill("owner/repo");
+    await page.locator("#generator-form button[type=submit]").click();
+    await page.locator("#copy-badge-btn").click();
+    await page.waitForTimeout(250);
+
+    expect(
+      envelopes(ingestionRequests).some(
+        (envelope) => envelope.data.baseData.name === "BadgeMarkdownCopied"
+      )
+    ).toBe(false);
+    await expect(page.locator("#toast")).not.toHaveClass(/visible/);
   });
 
   test("collects nothing when the visitor declines", async ({ page }) => {
