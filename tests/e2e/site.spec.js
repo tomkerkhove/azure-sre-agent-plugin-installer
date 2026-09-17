@@ -104,7 +104,9 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.locator("#gen-theme").selectOption("light");
     await page.locator("#generator-form button[type=submit]").click();
 
-    await expect(page.locator("#generator-output")).not.toContainText("theme=");
+    const output = page.locator("#generator-output");
+    await expect(output).toContainText("repo=owner%2Frepo");
+    await expect(output).not.toContainText("theme=");
   });
 
   test("shows a validation message for an invalid repository in the generator", async ({ page }) => {

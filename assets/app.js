@@ -48,8 +48,9 @@ function buildInstallerUrl(baseUrl, repo, path, theme) {
     url.searchParams.set("path", path);
   }
   // The default theme needs no query parameter, keeping generated links short.
-  if (normalizeTheme(theme) !== DEFAULT_THEME) {
-    url.searchParams.set("theme", normalizeTheme(theme));
+  const normalizedTheme = normalizeTheme(theme);
+  if (normalizedTheme !== DEFAULT_THEME) {
+    url.searchParams.set("theme", normalizedTheme);
   }
   return url.toString();
 }
