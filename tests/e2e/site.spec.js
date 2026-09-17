@@ -87,6 +87,25 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   });
 
+  test("toggles the page theme and preserves the selection in the URL", async ({ page }) => {
+    await page.goto("/?repo=owner/repo");
+
+    const toggle = page.locator("#theme-toggle");
+    await expect(toggle).toHaveText("Dark theme");
+    await expect(toggle).toHaveAttribute("aria-label", "Switch to dark theme");
+
+    await toggle.click();
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(toggle).toHaveText("Light theme");
+    await expect(page).toHaveURL(/repo=owner%2Frepo&theme=dark$/);
+
+    await toggle.click();
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(page).toHaveURL(/\?repo=owner%2Frepo$/);
+  });
+
   test("includes the selected theme in the generated badge markdown", async ({ page }) => {
     await page.goto("/");
 
