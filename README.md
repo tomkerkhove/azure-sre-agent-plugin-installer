@@ -1,6 +1,6 @@
 # Azure SRE Agent Plugin Installer
 
-[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/?repo=tomkerkhove/azure-carbon-sre)
+[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/?repo=tomkerkhove/azure-carbon-sre)
 
 A "Deploy to Azure" button, but for [Azure SRE Agent](https://aka.ms/sreagent) plugins.
 
@@ -17,7 +17,7 @@ your plugin's GitHub repository (and an optional `path` if the plugin lives in
 a subfolder):
 
 ```markdown
-[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/?repo=owner/repo)
+[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/?repo=owner/repo)
 ```
 
 When someone clicks the badge, they land on a page that:
@@ -36,7 +36,7 @@ The page renders in a light theme by default. Add `theme=dark` to the link to
 render it in a dark theme instead:
 
 ```markdown
-[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/?repo=owner/repo&theme=dark)
+[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/?repo=owner/repo&theme=dark)
 ```
 
 Any other value falls back to the light theme. The badge generator on the site
