@@ -48,6 +48,16 @@ function track(name, properties) {
   }
 }
 
+function trackException(error, properties) {
+  if (typeof window === "undefined" || !window.siteTelemetry) return;
+
+  const details = Object.assign({}, properties || {});
+  if (error && Number.isInteger(error.status)) {
+    details.status = error.status;
+  }
+  window.siteTelemetry.trackException(error, details);
+}
+
 // Custom metric so plugin installs can be counted and split per repository in
 // Application Insights.
 function trackPluginInstall(repo, properties) {
@@ -636,6 +646,7 @@ function initOnlineInstaller(repo, path) {
       );
     } catch (error) {
       alternatives.open = true;
+      trackException(error, { handled: true, operation: "list-agents" });
       setStatus(status, getFriendlyError(error, "list"), "error");
     } finally {
       signInBtn.disabled = false;
@@ -737,6 +748,7 @@ function initOnlineInstaller(repo, path) {
       );
     } catch (error) {
       alternatives.open = true;
+      trackException(error, { handled: true, operation: "install-plugin" });
       setStatus(status, getFriendlyError(error, "install"), "error");
     } finally {
       installBtn.disabled = !canAttemptInstallation(agents[index]);
@@ -988,6 +1000,7 @@ if (typeof module !== "undefined" && module.exports) {
     applyTheme,
     buildInstallerUrl,
     buildBadgeMarkdown,
+    trackException,
     copyToClipboard,
     DEFAULT_THEME,
     SUPPORTED_THEMES,
