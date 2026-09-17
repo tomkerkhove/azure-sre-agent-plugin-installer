@@ -19,24 +19,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Configure Application Insights (ingestion connection string)
+      - name: Build site
+        run: |
+          npm ci
+          npm run build
+          rm -rf node_modules
+
+      - name: Configure site
         env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
         run: |
-          # Write-only ingestion connection string. Telemetry stays disabled when
-          # the secret is not configured (for example on forks).
           node --input-type=module -e '
             import { writeFileSync } from "node:fs";
-            const connectionString = process.env.CONNECTION_STRING ?? "";
-            const config = {
+            const installerConfig = {
+              clientId: process.env.AZURE_CLIENT_ID || "",
+              tenantId: process.env.AZURE_TENANT_ID || "organizations",
+              dataPlaneScope: "https://azuresre.dev/.default",
+            };
+            const siteConfig = {
               telemetry: {
-                connectionString,
+                connectionString: process.env.CONNECTION_STRING || "",
                 cloudRole: "sre-agent-plugin-installer",
               },
             };
             writeFileSync(
               "assets/config.js",
-              `window.SITE_CONFIG = ${JSON.stringify(config, null, 2)};\n`
+              `window.SRE_AGENT_INSTALLER_CONFIG = Object.freeze(${JSON.stringify(installerConfig, null, 2)});\n` +
+                `window.SITE_CONFIG = ${JSON.stringify(siteConfig, null, 2)};\n`
             );
           '
 

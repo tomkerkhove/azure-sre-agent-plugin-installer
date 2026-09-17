@@ -1,3 +1,9 @@
+window.SRE_AGENT_INSTALLER_CONFIG = Object.freeze({
+  clientId: "",
+  tenantId: "organizations",
+  dataPlaneScope: "https://azuresre.dev/.default",
+});
+
 // Runtime configuration for the static site.
 //
 // `connectionString` is intentionally empty in source control. The GitHub Pages

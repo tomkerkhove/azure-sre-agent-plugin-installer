@@ -19,6 +19,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Build site
+        if: github.event.action != 'closed'
+        run: |
+          npm ci
+          npm run build
+          rm -rf node_modules
+
       - name: Deploy or remove PR preview
         uses: rossjrw/pr-preview-action@v1
         with:
