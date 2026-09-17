@@ -24,6 +24,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Configure Application Insights (ingestion connection string)
+        env:
+          CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
+        run: |
+          # Write-only ingestion connection string. Telemetry stays disabled when
+          # the secret is not configured (for example on forks).
+          node --input-type=module -e '
+            import { writeFileSync } from "node:fs";
+            const connectionString = process.env.CONNECTION_STRING ?? "";
+            const config = {
+              telemetry: {
+                connectionString,
+                cloudRole: "sre-agent-plugin-installer",
+              },
+            };
+            writeFileSync(
+              "assets/config.js",
+              `window.SITE_CONFIG = ${JSON.stringify(config, null, 2)};\n`
+            );
+          '
+
       - name: Setup Pages
         uses: actions/configure-pages@v6
 

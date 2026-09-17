@@ -137,4 +137,34 @@ test.describe("Install to Azure SRE Agent site", () => {
       "Please enter a valid GitHub repository"
     );
   });
+
+  test("shows a validation message for an invalid path in the generator", async ({ page }) => {
+    await page.goto("/");
+
+    await page.locator("#gen-repo").fill("owner/repo");
+    await page.locator("#gen-path").fill("../../etc/passwd");
+    await page.locator("#generator-form button[type=submit]").click();
+
+    await expect(page.locator("#generator-output")).toContainText(
+      "Please enter a valid path within the repository"
+    );
+  });
+
+  test("ignores an invalid path query parameter", async ({ page }) => {
+    await page.goto("/?repo=owner/repo&path=../../etc/passwd");
+
+    const installCard = page.locator("#install-card");
+    await expect(installCard).toBeVisible();
+    await expect(installCard.locator("dt", { hasText: "Path in repository" })).toHaveCount(0);
+  });
+
+  test("renders a script-like repo parameter as text instead of markup", async ({ page }) => {
+    const injected = "<img src=x onerror=window.__xss=1>";
+    await page.goto(`/?repo=${encodeURIComponent(injected)}&path=${encodeURIComponent(injected)}`);
+
+    await expect(page.locator("#empty-state")).toBeVisible();
+    await expect(page.locator("#install-card")).toBeHidden();
+    expect(await page.evaluate(() => window.__xss)).toBeUndefined();
+    expect(await page.locator("#install-card").innerHTML()).toBe("");
+  });
 });
