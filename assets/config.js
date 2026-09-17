@@ -1,6 +1,6 @@
 window.SRE_AGENT_INSTALLER_CONFIG = Object.freeze({
   "clientId": "cdd386bb-7655-4840-a9ee-c5e1178e245f",
-  "tenantId": "84b51e0a-2749-4060-bb46-111141978ee6",
+  "tenantId": "organizations",
   "dataPlaneScope": "https://azuresre.dev/.default"
 });
 window.SITE_CONFIG = {
