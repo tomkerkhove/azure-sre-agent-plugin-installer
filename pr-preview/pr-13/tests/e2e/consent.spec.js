@@ -158,6 +158,69 @@ test.describe("Privacy consent", () => {
     expect(badgeGenerated.data.baseData.properties.hasPath).toBe("true");
   });
 
+  test("does not report a badge copy event when clipboard writing fails", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: () => Promise.reject(new Error("Clipboard unavailable")),
+        },
+      });
+    });
+
+    await page.goto("/");
+    await page.locator("#consent-accept").click();
+    await page.locator("#gen-repo").fill("owner/repo");
+    await page.locator("#generator-form button[type=submit]").click();
+    await expect
+      .poll(
+        () =>
+          envelopes(ingestionRequests).some(
+            (envelope) => envelope.data.baseData.name === "BadgeGenerated"
+          ),
+        { timeout: 5000 }
+      )
+      .toBe(true);
+
+    await page.locator("#copy-badge-btn").click();
+    await page.waitForTimeout(250);
+
+    expect(
+      envelopes(ingestionRequests).some(
+        (envelope) => envelope.data.baseData.name === "BadgeMarkdownCopied"
+      )
+    ).toBe(false);
+    await expect(page.locator("#toast")).not.toHaveClass(/visible/);
+  });
+
+  test("does not report a badge copy event when the fallback copy fails", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: undefined,
+      });
+      document.execCommand = () => false;
+    });
+
+    await page.goto("/");
+    await page.locator("#consent-accept").click();
+    await page.locator("#gen-repo").fill("owner/repo");
+    await page.locator("#generator-form button[type=submit]").click();
+    await page.locator("#copy-badge-btn").click();
+    await page.waitForTimeout(250);
+
+    expect(
+      envelopes(ingestionRequests).some(
+        (envelope) => envelope.data.baseData.name === "BadgeMarkdownCopied"
+      )
+    ).toBe(false);
+    await expect(page.locator("#toast")).not.toHaveClass(/visible/);
+  });
+
   test("collects nothing when the visitor declines", async ({ page }) => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
