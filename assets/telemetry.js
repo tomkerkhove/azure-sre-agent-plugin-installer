@@ -14,7 +14,7 @@
   "use strict";
 
   var CONSENT_STORAGE_KEY = "sre-agent-plugin-installer.analytics-consent";
-  var CONSENT_VERSION = 1;
+  var CONSENT_VERSION = 2;
   var MAX_PROPERTIES = 12;
   var MAX_PROPERTY_LENGTH = 256;
   var SAFE_EXCEPTION_TYPES = [

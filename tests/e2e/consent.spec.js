@@ -107,6 +107,12 @@ test.describe("Privacy consent", () => {
     await expect(page.locator("#consent-status")).toHaveText(
       "Anonymous analytics: awaiting your choice."
     );
+    await expect(page.locator("#consent-banner")).toContainText(
+      "usage and reliability analytics"
+    );
+    await expect(page.locator("#consent-banner")).toContainText(
+      "application error categories"
+    );
 
     await page.locator("#copy-repo-btn").click();
     await page.waitForTimeout(250);
