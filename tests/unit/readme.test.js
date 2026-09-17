@@ -109,7 +109,9 @@ describe("loadRepositoryReadme", () => {
     `;
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      text: jest.fn().mockResolvedValue("<h1>Azure Carbon SRE</h1>"),
+      text: jest.fn().mockResolvedValue(
+        JSON.stringify({ content: "<h1>Azure Carbon SRE</h1>" })
+      ),
     });
 
     await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");

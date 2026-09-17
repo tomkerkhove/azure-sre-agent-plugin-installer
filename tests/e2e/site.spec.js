@@ -82,14 +82,16 @@ test.describe("Install to Azure SRE Agent site", () => {
         );
         await route.fulfill({
           status: 200,
-          contentType: "text/html",
-          body: `
+          contentType: "application/json",
+          body: JSON.stringify({
+            content: `
             <h1>Azure Carbon SRE</h1>
             <p>An Azure SRE Agent plugin marketplace.</p>
             <h2>Included plugin</h2>
             <table><tbody><tr><td><code>azure-carbon-sre</code></td></tr></tbody></table>
             <img src="images/plugin.png" alt="Plugin diagram">
           `,
+          }),
         });
       }
     );

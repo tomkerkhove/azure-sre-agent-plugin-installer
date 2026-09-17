@@ -397,11 +397,19 @@ async function loadRepositoryReadme(repo) {
     });
     if (!response.ok) throw new Error("README request failed");
 
-    const renderedMarkup = await readResponseTextWithLimit(
+    const responseText = await readResponseTextWithLimit(
       response,
       README_MAX_LENGTH
     );
-    const sanitizedMarkup = sanitizeRepositoryReadmeHtml(renderedMarkup, repo);
+    const payload = JSON.parse(responseText);
+    if (!payload || typeof payload.content !== "string") {
+      throw new Error("README response is invalid");
+    }
+
+    const sanitizedMarkup = sanitizeRepositoryReadmeHtml(
+      payload.content,
+      repo
+    );
     if (!sanitizedMarkup.trim()) throw new Error("README is empty");
 
     content.innerHTML = sanitizedMarkup;
