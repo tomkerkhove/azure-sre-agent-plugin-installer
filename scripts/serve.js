@@ -19,7 +19,8 @@ const server = http.createServer((req, res) => {
   const urlPath = decodeURIComponent(req.url.split("?")[0]);
   let filePath = path.join(ROOT, urlPath === "/" ? "index.html" : urlPath);
 
-  if (!filePath.startsWith(ROOT)) {
+  const relative = path.relative(ROOT, filePath);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
     res.writeHead(403);
     res.end("Forbidden");
     return;
