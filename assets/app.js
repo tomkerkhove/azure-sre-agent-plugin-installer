@@ -275,7 +275,7 @@ function sanitizeRepositoryReadmeHtml(markup, repo) {
   const template = document.createElement("template");
   const repoUrl = `https://github.com/${repo}`;
   const linkBaseUrl = `${repoUrl}/blob/HEAD/`;
-  const imageBaseUrl = `https://raw.githubusercontent.com/${repo}/HEAD/`;
+  const imageBaseUrl = `${repoUrl}/raw/HEAD/`;
   template.innerHTML = markup;
 
   Array.from(template.content.querySelectorAll("*")).forEach((element) => {

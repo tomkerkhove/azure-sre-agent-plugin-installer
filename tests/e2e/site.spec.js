@@ -68,6 +68,12 @@ test.describe("Install to Azure SRE Agent site", () => {
   test("renders the repository README in the install card", async ({ page }) => {
     let readmeRequests = 0;
     await page.route(
+      "https://github.com/tomkerkhove/azure-carbon-sre/raw/HEAD/images/plugin.png",
+      async (route) => {
+        await route.fulfill({ status: 204 });
+      }
+    );
+    await page.route(
       "https://api.github.com/repos/tomkerkhove/azure-carbon-sre/readme",
       async (route) => {
         readmeRequests += 1;
@@ -82,6 +88,7 @@ test.describe("Install to Azure SRE Agent site", () => {
             <p>An Azure SRE Agent plugin marketplace.</p>
             <h2>Included plugin</h2>
             <table><tbody><tr><td><code>azure-carbon-sre</code></td></tr></tbody></table>
+            <img src="images/plugin.png" alt="Plugin diagram">
           `,
         });
       }
@@ -96,6 +103,10 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(readme).toBeVisible();
     await expect(readme.locator("h1")).toHaveText("Azure Carbon SRE");
     await expect(readme.locator("table code")).toHaveText("azure-carbon-sre");
+    await expect(readme.locator("img")).toHaveAttribute(
+      "src",
+      "https://github.com/tomkerkhove/azure-carbon-sre/raw/HEAD/images/plugin.png"
+    );
     await expect(readme).toHaveAttribute("role", "region");
     await expect(readme).toHaveAttribute(
       "aria-labelledby",

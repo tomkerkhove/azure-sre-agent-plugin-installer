@@ -96,7 +96,7 @@ describe("sanitizeRepositoryReadmeHtml", () => {
       "https://github.com/tomkerkhove/azure-carbon-sre/blob/HEAD/CONTRIBUTING.md"
     );
     expect(wrapper.querySelector("img").getAttribute("src")).toBe(
-      "https://raw.githubusercontent.com/tomkerkhove/azure-carbon-sre/HEAD/images/plugin.png"
+      "https://github.com/tomkerkhove/azure-carbon-sre/raw/HEAD/images/plugin.png"
     );
   });
 });
