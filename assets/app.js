@@ -71,7 +71,6 @@ function initThemeToggle(initialTheme) {
     const isDark = theme === "dark";
     toggle.textContent = isDark ? "Light theme" : "Dark theme";
     toggle.setAttribute("aria-label", `Switch to ${isDark ? "light" : "dark"} theme`);
-    toggle.setAttribute("aria-pressed", String(isDark));
   }
 
   updateToggle(initialTheme);

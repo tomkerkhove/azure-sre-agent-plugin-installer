@@ -48,6 +48,7 @@ body {
 }
 
 .theme-toggle {
+  display: inline-flex;
   min-width: 106px;
   justify-content: center;
 }
