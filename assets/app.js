@@ -66,27 +66,26 @@ function applyTheme(theme) {
 function initThemeToggle(initialTheme) {
   const toggle = document.getElementById("theme-toggle");
   if (!toggle) return;
+  let currentTheme = initialTheme;
 
   function updateToggle(theme) {
     const isDark = theme === "dark";
     toggle.textContent = isDark ? "Light theme" : "Dark theme";
-    toggle.setAttribute("aria-label", `Switch to ${isDark ? "light" : "dark"} theme`);
   }
 
-  updateToggle(initialTheme);
+  updateToggle(currentTheme);
   toggle.addEventListener("click", () => {
-    const currentTheme = document.documentElement.getAttribute("data-theme");
-    const nextTheme = applyTheme(currentTheme === "dark" ? "light" : "dark");
+    currentTheme = applyTheme(currentTheme === "dark" ? "light" : "dark");
     const url = new URL(window.location.href);
 
-    if (nextTheme === DEFAULT_THEME) {
+    if (currentTheme === DEFAULT_THEME) {
       url.searchParams.delete("theme");
     } else {
-      url.searchParams.set("theme", nextTheme);
+      url.searchParams.set("theme", currentTheme);
     }
 
     window.history.replaceState(null, "", url);
-    updateToggle(nextTheme);
+    updateToggle(currentTheme);
   });
 }
 

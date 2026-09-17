@@ -92,7 +92,6 @@ test.describe("Install to Azure SRE Agent site", () => {
 
     const toggle = page.locator("#theme-toggle");
     await expect(toggle).toHaveText("Dark theme");
-    await expect(toggle).toHaveAttribute("aria-label", "Switch to dark theme");
 
     await toggle.click();
 
