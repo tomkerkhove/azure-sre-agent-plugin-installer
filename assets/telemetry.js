@@ -25,6 +25,7 @@
     "Asia/Nicosia": true,
     "Atlantic/Azores": true,
     "Atlantic/Canary": true,
+    "Atlantic/Faeroe": true,
     "Atlantic/Faroe": true,
     "Atlantic/Madeira": true,
     "Atlantic/Reykjavik": true,

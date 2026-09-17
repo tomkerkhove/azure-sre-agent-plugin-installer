@@ -253,6 +253,13 @@ describe("regional consent", () => {
     expect(requests).toHaveLength(0);
   });
 
+  test("requires consent for the canonical Faroe Islands time zone", () => {
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      timeZone: "Atlantic/Faeroe",
+    });
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
   test("requires consent when the time zone does not identify a region", () => {
     const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
       timeZone: "UTC",
