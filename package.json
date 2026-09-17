@@ -1,0 +1,18 @@
+{
+  "name": "tomkerkhove-azure-sre-agent-plugin-installer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A one-click installer for Azure SRE Agent plugins.",
+  "scripts": {
+    "build": "mkdir -p assets/vendor && cp node_modules/@azure/msal-browser/lib/msal-browser.min.js assets/vendor/msal-browser.min.js",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tomkerkhove/tomkerkhove-azure-sre-agent-plugin-installer.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@azure/msal-browser": "5.22.0"
+  }
+}
