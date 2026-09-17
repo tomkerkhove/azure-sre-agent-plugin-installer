@@ -112,6 +112,12 @@ function buildInstallerUrl(baseUrl, repo, path, theme) {
   return url.toString();
 }
 
+// The badge generator lives on the landing page, but generated badges always
+// need to link to the dedicated install page.
+function getInstallPageUrl(currentHref) {
+  return new URL("install.html", currentHref).toString();
+}
+
 function applyTheme(theme) {
   const normalized = normalizeTheme(theme);
   if (typeof document !== "undefined" && document.documentElement) {
@@ -939,7 +945,7 @@ function initGenerator() {
     }
 
     const installerUrl = buildInstallerUrl(
-      new URL("install.html", window.location.href).toString(),
+      getInstallPageUrl(window.location.href),
       repo,
       pathInput,
       themeInput ? themeInput.value : DEFAULT_THEME
@@ -999,6 +1005,7 @@ if (typeof module !== "undefined" && module.exports) {
     normalizeTheme,
     applyTheme,
     buildInstallerUrl,
+    getInstallPageUrl,
     buildBadgeMarkdown,
     trackException,
     copyToClipboard,

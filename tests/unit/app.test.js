@@ -2,6 +2,7 @@ const {
   normalizeRepo,
   normalizeTheme,
   buildInstallerUrl,
+  getInstallPageUrl,
   buildBadgeMarkdown,
   trackException,
 } = require("../../assets/app.js");
@@ -77,6 +78,26 @@ describe("buildInstallerUrl", () => {
   test("omits the theme query parameter for an unsupported theme", () => {
     const url = buildInstallerUrl("https://example.com/", "owner/repo", "", "neon");
     expect(url).toBe("https://example.com/?repo=owner%2Frepo");
+  });
+});
+
+describe("getInstallPageUrl", () => {
+  test("resolves install.html alongside the landing page", () => {
+    expect(getInstallPageUrl("https://example.com/")).toBe(
+      "https://example.com/install.html"
+    );
+  });
+
+  test("resolves relative to a subpath deployment", () => {
+    expect(
+      getInstallPageUrl("https://example.com/azure-sre-agent-plugin-installer/")
+    ).toBe("https://example.com/azure-sre-agent-plugin-installer/install.html");
+  });
+
+  test("ignores the current page's own query string", () => {
+    expect(getInstallPageUrl("https://example.com/?theme=dark")).toBe(
+      "https://example.com/install.html"
+    );
   });
 });
 

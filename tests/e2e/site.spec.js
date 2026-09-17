@@ -134,7 +134,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     const output = page.locator("#generator-output");
     await expect(output).toBeVisible();
     await expect(output).toContainText("[![Install to Azure SRE Agent]");
-    await expect(output).toContainText("repo=owner%2Frepo");
+    await expect(output).toContainText("install.html?repo=owner%2Frepo");
     await expect(output).toContainText("path=plugins%2Fmy-plugin");
   });
 
