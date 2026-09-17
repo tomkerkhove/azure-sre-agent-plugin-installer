@@ -275,19 +275,23 @@
     flushPendingPageView();
   }
 
+  function resetSession() {
+    pendingPageView = null;
+    operationId = "";
+    try {
+      if (sessionStore) {
+        sessionStore.removeItem("sre-agent-plugin-installer.session-id");
+      }
+    } catch (error) {
+      /* ignore */
+    }
+  }
+
   function setConsent(granted) {
     consent = granted ? "granted" : "denied";
     writeConsent(granted);
     if (!granted) {
-      pendingPageView = null;
-      operationId = "";
-      try {
-        if (sessionStore) {
-          sessionStore.removeItem("sre-agent-plugin-installer.session-id");
-        }
-      } catch (error) {
-        /* ignore */
-      }
+      resetSession();
     }
     renderConsentUi();
     flushPendingPageView();
@@ -340,6 +344,7 @@
       change.addEventListener("click", function (event) {
         event.preventDefault();
         consent = null;
+        resetSession();
         if (localStore) {
           try {
             localStore.removeItem(CONSENT_STORAGE_KEY);
@@ -348,6 +353,10 @@
           }
         }
         renderConsentUi();
+        var acceptButton = document.getElementById("consent-accept");
+        if (acceptButton) {
+          acceptButton.focus();
+        }
       });
     }
 

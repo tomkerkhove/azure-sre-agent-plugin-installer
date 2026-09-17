@@ -68,9 +68,9 @@ adoption and scenarios can be understood.
    [`assets/config.js`](./assets/config.js) from that secret at deploy time - the
    value is never committed to the repository.
 4. Recommended hardening on the Azure side: enable
-   [local authentication only for ingestion](https://learn.microsoft.com/azure/azure-monitor/app/api-filtering-sampling),
-   set a daily ingestion cap to limit abuse of the public endpoint, and keep the
-   default 90-day retention.
+   [a daily ingestion cap](https://learn.microsoft.com/azure/azure-monitor/logs/daily-cap)
+   to limit abuse of the public ingestion endpoint, and keep the default 90-day
+   [data retention](https://learn.microsoft.com/azure/azure-monitor/logs/data-retention-configure).
 
 Without the secret, `connectionString` stays empty and all telemetry (and the
 consent banner) is disabled.

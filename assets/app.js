@@ -203,8 +203,17 @@ function initGenerator() {
     event.preventDefault();
 
     const repoInput = document.getElementById("gen-repo").value;
-    const pathInput = normalizePath(document.getElementById("gen-path").value);
+    const rawPath = document.getElementById("gen-path").value.trim();
+    const pathInput = normalizePath(rawPath);
     const repo = normalizeRepo(repoInput);
+
+    if (rawPath && !pathInput) {
+      output.hidden = false;
+      output.textContent =
+        "Please enter a valid path within the repository, e.g. plugins/my-plugin";
+      track("BadgeGenerationFailed", { reason: "invalid-path" });
+      return;
+    }
 
     if (!repo) {
       output.hidden = false;
