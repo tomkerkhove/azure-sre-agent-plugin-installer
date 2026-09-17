@@ -135,6 +135,18 @@ test.describe("Install to Azure SRE Agent site", () => {
     ).toHaveAttribute("href", "https://github.com/owner/missing-readme");
   });
 
+  test("keeps the README widget within a narrow viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto("/?repo=owner/repo");
+
+    await expect(page.locator(".repository-readme-header")).toBeVisible();
+    expect(
+      await page
+        .locator(".repository-readme-header")
+        .evaluate((header) => header.scrollWidth <= header.clientWidth)
+    ).toBe(true);
+  });
+
   test("normalizes a full GitHub URL passed as the repo parameter", async ({ page }) => {
     await page.goto("/?repo=https://github.com/owner/repo");
 
