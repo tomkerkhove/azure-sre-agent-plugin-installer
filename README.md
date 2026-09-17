@@ -61,7 +61,7 @@ Markdown snippet for your repository without crafting the URL by hand.
 automatically deploys a preview of the site for every pull request, so
 changes can be reviewed and tested live before merging. Each pull request is
 deployed to its own path
-(`https://tomkerkhove.github.io/tomkerkhove-azure-sre-agent-plugin-installer/pr-preview/pr-<number>/`),
+(`https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/pr-preview/pr-<number>/`),
 so multiple PRs can have previews live at the same time without overwriting
 each other or the production site. The workflow posts a comment on the pull
 request with a link to the preview and updates that same comment every time
