@@ -166,4 +166,16 @@ function init() {
   initGenerator();
 }
 
-document.addEventListener("DOMContentLoaded", init);
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", init);
+}
+
+// Export pure functions for unit testing (Node/CommonJS) while keeping the
+// browser bundle dependency-free.
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    normalizeRepo,
+    buildInstallerUrl,
+    buildBadgeMarkdown,
+  };
+}
