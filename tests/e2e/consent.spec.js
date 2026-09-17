@@ -100,6 +100,19 @@ test.describe("Privacy consent", () => {
     ).toBeNull();
   });
 
+  test("asks for consent when a fixed-offset time zone obscures the region", async ({
+    page,
+  }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests, "+01:00");
+
+    await page.goto("/?repo=owner/repo");
+
+    await expect(page.locator("#consent-banner")).toBeVisible();
+    await page.waitForTimeout(250);
+    expect(ingestionRequests).toHaveLength(0);
+  });
+
   test("sets no cookies", async ({ page, context }) => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);

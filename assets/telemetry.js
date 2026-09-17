@@ -46,8 +46,10 @@
   var GUID_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  function safeStorage(storage) {
+  function safeStorage(name) {
     try {
+      var storage = window[name];
+      if (!storage) return null;
       var probe = "__probe__";
       storage.setItem(probe, "1");
       storage.removeItem(probe);
@@ -57,13 +59,14 @@
     }
   }
 
-  var localStore = safeStorage(window.localStorage);
-  var sessionStore = safeStorage(window.sessionStorage);
+  var localStore = safeStorage("localStorage");
+  var sessionStore = safeStorage("sessionStorage");
+  var consentStore = localStore || sessionStore;
 
   function readConsent() {
-    if (!localStore) return null;
+    if (!consentStore) return null;
     try {
-      var raw = localStore.getItem(CONSENT_STORAGE_KEY);
+      var raw = consentStore.getItem(CONSENT_STORAGE_KEY);
       if (!raw) return null;
       var parsed = JSON.parse(raw);
       if (!parsed || parsed.version !== CONSENT_VERSION) return null;
@@ -74,9 +77,9 @@
   }
 
   function writeConsent(granted) {
-    if (!localStore) return;
+    if (!consentStore) return;
     try {
-      localStore.setItem(
+      consentStore.setItem(
         CONSENT_STORAGE_KEY,
         JSON.stringify({
           version: CONSENT_VERSION,
@@ -208,7 +211,8 @@
       if (
         timeZone === "UTC" ||
         timeZone === "GMT" ||
-        timeZone.indexOf("Etc/") === 0
+        timeZone.indexOf("Etc/") === 0 ||
+        /^[+-]\d{2}:\d{2}$/.test(timeZone)
       ) {
         return true;
       }
@@ -226,7 +230,7 @@
   var endpoint = parseConnectionString(config.connectionString);
   var cloudRole = config.cloudRole || "sre-agent-plugin-installer";
   var consent = readConsent();
-  if (consent === null && !requiresConsent()) {
+  if (consentStore && consent === null && !requiresConsent()) {
     consent = "granted";
   }
   var operationId = "";
@@ -422,9 +426,9 @@
         event.preventDefault();
         consent = null;
         resetSession();
-        if (localStore) {
+        if (consentStore) {
           try {
-            localStore.removeItem(CONSENT_STORAGE_KEY);
+            consentStore.removeItem(CONSENT_STORAGE_KEY);
           } catch (error) {
             /* ignore */
           }

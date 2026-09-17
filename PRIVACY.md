@@ -13,7 +13,8 @@ usage analytics to [Azure Application Insights](https://learn.microsoft.com/azur
 * If the browser time zone is unavailable or does not identify a region,
   analytics remain off and the site asks for consent.
 * Choosing **Decline** stops all telemetry; the choice is remembered in
-  `localStorage` (a strictly functional, first-party entry, not a cookie).
+  `localStorage`, or for the current tab in `sessionStorage` when local storage
+  is unavailable (strictly functional, first-party entries, not cookies).
 * You can change your choice at any time through **Change privacy choice** in
   the page footer.
 
@@ -31,7 +32,7 @@ social media widgets. Two first-party browser storage entries are used:
 
 | Key | Storage | Purpose |
 | --- | --- | --- |
-| `sre-agent-plugin-installer.analytics-consent` | `localStorage` | Remembers your privacy choice. |
+| `sre-agent-plugin-installer.analytics-consent` | `localStorage`, or `sessionStorage` fallback | Remembers your privacy choice. |
 | `sre-agent-plugin-installer.session-id` | `sessionStorage` | Random per-tab identifier used to group events of a single visit. Cleared when the tab closes and when consent is withdrawn. |
 
 ## What is collected

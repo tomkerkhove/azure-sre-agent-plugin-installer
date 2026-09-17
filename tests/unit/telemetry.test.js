@@ -26,8 +26,10 @@ function createStorage() {
 function loadTelemetry(connectionString, options = {}) {
   const requests = [];
   const listeners = {};
-  const localStorage = options.localStorage || createStorage();
-  const sessionStorage = options.sessionStorage || createStorage();
+  const localStorage =
+    options.localStorage === undefined ? createStorage() : options.localStorage;
+  const sessionStorage =
+    options.sessionStorage === undefined ? createStorage() : options.sessionStorage;
 
   const sandbox = {
     console,
@@ -267,6 +269,13 @@ describe("regional consent", () => {
     expect(telemetry.isEnabled()).toBe(false);
   });
 
+  test("requires consent for fixed-offset time zones", () => {
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      timeZone: "+01:00",
+    });
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
   test("requires consent when time zone detection fails", () => {
     const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
       timeZoneError: true,
@@ -286,6 +295,33 @@ describe("regional consent", () => {
       timeZone: "America/New_York",
     });
 
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
+  test("falls back to session storage when local storage is unavailable", () => {
+    const sessionStorage = createStorage();
+    const first = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage: null,
+      sessionStorage,
+      timeZone: "America/New_York",
+    });
+    first.telemetry.setConsent(false);
+
+    const second = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage: null,
+      sessionStorage,
+      timeZone: "America/New_York",
+    });
+
+    expect(second.telemetry.isEnabled()).toBe(false);
+  });
+
+  test("requires consent when no preference storage is available", () => {
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage: null,
+      sessionStorage: null,
+      timeZone: "America/New_York",
+    });
     expect(telemetry.isEnabled()).toBe(false);
   });
 });
