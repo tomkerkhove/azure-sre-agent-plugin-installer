@@ -41,6 +41,18 @@ body {
   padding: 48px 20px 80px;
 }
 
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  min-width: 158px;
+  justify-content: center;
+}
+
 header.hero {
   text-align: center;
   margin-bottom: 32px;

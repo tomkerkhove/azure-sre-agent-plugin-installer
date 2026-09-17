@@ -63,6 +63,32 @@ function applyTheme(theme) {
   return normalized;
 }
 
+function initThemeToggle(initialTheme) {
+  const toggle = document.getElementById("theme-toggle");
+  if (!toggle) return;
+  let currentTheme = initialTheme;
+
+  function updateToggle(theme) {
+    const isDark = theme === "dark";
+    toggle.textContent = `Switch to ${isDark ? "light" : "dark"} theme`;
+  }
+
+  updateToggle(currentTheme);
+  toggle.addEventListener("click", () => {
+    currentTheme = applyTheme(currentTheme === "dark" ? "light" : "dark");
+    const url = new URL(window.location.href);
+
+    if (currentTheme === DEFAULT_THEME) {
+      url.searchParams.delete("theme");
+    } else {
+      url.searchParams.set("theme", currentTheme);
+    }
+
+    window.history.replaceState(null, "", url);
+    updateToggle(currentTheme);
+  });
+}
+
 function buildBadgeMarkdown(installerUrl) {
   return `[![Install to Azure SRE Agent](${BADGE_IMAGE_URL})](${installerUrl})`;
 }
@@ -183,7 +209,8 @@ function init() {
   const repo = normalizeRepo(params.get("repo"));
   const path = params.get("path") || "";
 
-  applyTheme(params.get("theme"));
+  const theme = applyTheme(params.get("theme"));
+  initThemeToggle(theme);
 
   if (repo) {
     renderInstallCard(repo, path);
