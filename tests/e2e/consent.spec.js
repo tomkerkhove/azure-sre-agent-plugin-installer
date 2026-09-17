@@ -104,9 +104,10 @@ test.describe("Privacy consent", () => {
     expect(pageView.data.baseData.properties.repository).toBe("owner/repo");
   });
 
-  test("reports the plugin install metric with the repository name", async ({ page }) => {
+  test("reports the plugin install metric with the repository name", async ({ page, context }) => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
     await page.goto("/?repo=owner/repo");
     await page.locator("#consent-accept").click();
