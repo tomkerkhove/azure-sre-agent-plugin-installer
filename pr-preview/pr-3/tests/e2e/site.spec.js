@@ -32,6 +32,10 @@ test.describe("Install to Azure SRE Agent site", () => {
     );
     await expect(page.locator("#alternative-options")).toHaveAttribute("open", "");
     await expect(page.locator("#api-import-form")).toBeVisible();
+    await expect(page.locator("#alternative-options h3")).toHaveText([
+      "Install in the Azure portal",
+      "Generate an Azure CLI command",
+    ]);
   });
 
   test("shows the path in repository when the path query parameter is provided", async ({ page }) => {

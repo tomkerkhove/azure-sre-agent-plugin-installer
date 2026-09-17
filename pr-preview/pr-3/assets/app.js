@@ -793,6 +793,21 @@ function renderInstallCard(repo, path) {
     </div>
     <details class="alternative-options" id="alternative-options">
       <summary>Other installation options</summary>
+      <h3>Install in the Azure portal</h3>
+      <ol class="steps">
+        <li>Open your <strong>Azure SRE Agent</strong> instance in the Azure portal.</li>
+        <li>Go to <strong>Builder &gt; Plugins</strong>, then choose <strong>Install from URL</strong>.</li>
+        <li>Paste the repository below and confirm the install.</li>
+      </ol>
+      <div class="copy-row">
+        <input id="repo-value" type="text" value="${repo}" readonly />
+        <button id="copy-repo-btn" type="button">Copy</button>
+      </div>
+      <p class="hint">Don't have an Azure SRE Agent yet? Create one first, then come back to this page.</p>
+      <div class="actions">
+        <a class="btn" href="${SRE_AGENT_PORTAL_URL}" target="_blank" rel="noopener noreferrer">Open Azure SRE Agent</a>
+        <a class="btn secondary" href="${repoUrl}" target="_blank" rel="noopener noreferrer">View plugin source</a>
+      </div>
       <h3>Generate an Azure CLI command</h3>
       <p>
         Enter your agent's data plane endpoint to generate a command that imports this
@@ -818,21 +833,6 @@ function renderInstallCard(repo, path) {
       <p class="hint">
         The command gets a short-lived token through your Azure CLI session.
       </p>
-      <h3>Install in the Azure portal</h3>
-      <ol class="steps">
-        <li>Open your <strong>Azure SRE Agent</strong> instance in the Azure portal.</li>
-        <li>Go to <strong>Builder &gt; Plugins</strong>, then choose <strong>Install from URL</strong>.</li>
-        <li>Paste the repository below and confirm the install.</li>
-      </ol>
-      <div class="copy-row">
-        <input id="repo-value" type="text" value="${repo}" readonly />
-        <button id="copy-repo-btn" type="button">Copy</button>
-      </div>
-      <p class="hint">Don't have an Azure SRE Agent yet? Create one first, then come back to this page.</p>
-      <div class="actions">
-        <a class="btn" href="${SRE_AGENT_PORTAL_URL}" target="_blank" rel="noopener noreferrer">Open Azure SRE Agent</a>
-        <a class="btn secondary" href="${repoUrl}" target="_blank" rel="noopener noreferrer">View plugin source</a>
-      </div>
     </details>
   `;
 
