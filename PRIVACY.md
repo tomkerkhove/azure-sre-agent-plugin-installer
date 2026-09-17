@@ -35,6 +35,10 @@ Only after consent, and only these fields:
   whether a sub-path was used.
 * A `PluginInstalls` custom metric, with that public repository name as a
   dimension, so installs can be counted per plugin.
+* Application exception occurrences, including an allowlisted exception
+  category, whether it was handled, the operation where it occurred and, for
+  API failures, the HTTP status code. Exception messages and stack traces are
+  discarded in the browser and are never sent.
 * Standard Application Insights ingestion metadata (timestamp, browser user
   agent, and a coarse, city-level location derived from your IP address). IP
   masking is left at its Azure default, so the IP address is used to derive that
@@ -47,7 +51,7 @@ data processor for the Azure Application Insights resource.
 
 What is **never** stored: names, e-mail addresses, IP addresses, Azure
 subscription or tenant identifiers, Azure credentials/tokens, the full page URL,
-or free-text you type into the badge generator.
+exception messages, stack traces, or free-text you type into the badge generator.
 
 ## Third-party content
 
