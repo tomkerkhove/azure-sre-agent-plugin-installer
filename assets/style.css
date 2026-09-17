@@ -27,6 +27,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
@@ -104,6 +108,11 @@ header.hero p {
   font-size: 1.15rem;
 }
 
+.card h3 {
+  margin: 24px 0 8px;
+  font-size: 1rem;
+}
+
 .plugin-meta dt {
   font-weight: 600;
   color: var(--muted);
@@ -175,8 +184,27 @@ button.secondary {
   border: 1px solid var(--border);
 }
 
+.btn.secondary {
+  background: var(--surface-alt);
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
 button.secondary:hover {
   background: var(--button-secondary-hover);
+}
+
+.btn.secondary:hover {
+  background: var(--button-secondary-hover);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+button:disabled:hover {
+  background: var(--surface-alt);
 }
 
 .actions {
@@ -220,6 +248,46 @@ pre.output {
 .hint {
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+.online-installer {
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+}
+
+.status {
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  background: #e8f3fc;
+  color: #004578;
+}
+
+.status.success {
+  background: #e7f4e4;
+  color: #0b6a0b;
+}
+
+.status.warning {
+  background: #fff4ce;
+  color: #6b4f00;
+}
+
+.status.error {
+  background: #fde7e9;
+  color: #a4262c;
+}
+
+.alternative-options {
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+  padding-top: 18px;
+}
+
+.alternative-options summary {
+  cursor: pointer;
+  color: var(--azure-blue);
+  font-weight: 600;
 }
 
 .empty-state {

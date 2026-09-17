@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta
     http-equiv="Content-Security-Policy"
-    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://img.shields.io; connect-src https://dc.services.visualstudio.com https://*.applicationinsights.azure.com https://*.monitor.azure.com https://*.applicationinsights.azure.cn https://*.monitor.azure.cn https://*.applicationinsights.azure.us https://*.monitor.azure.us; base-uri 'none'; form-action 'self'"
+    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://img.shields.io; connect-src https://login.microsoftonline.com https://management.azure.com https://*.azuresre.ai https://dc.services.visualstudio.com https://*.applicationinsights.azure.com https://*.monitor.azure.com https://*.applicationinsights.azure.cn https://*.monitor.azure.cn https://*.applicationinsights.azure.us https://*.monitor.azure.us; frame-src https://login.microsoftonline.com; base-uri 'none'; form-action 'self'"
   />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <title>Install to Azure SRE Agent</title>
@@ -97,6 +97,12 @@
         Not affiliated with Microsoft. Built to help the
         <a href="https://aka.ms/sreagent" target="_blank" rel="noopener noreferrer">Azure SRE Agent</a>
         plugin ecosystem grow.
+        <a
+          href="https://github.com/tomkerkhove/azure-sre-agent-plugin-installer"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Contribute on GitHub</a
+        >.
       </p>
       <button
         type="button"
@@ -136,6 +142,7 @@
 
   <script src="assets/config.js"></script>
   <script src="assets/telemetry.js"></script>
+  <script src="assets/vendor/msal-browser.min.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>

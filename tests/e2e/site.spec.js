@@ -23,6 +23,21 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(installCard.locator("#repo-value")).toHaveValue("owner/repo");
   });
 
+  test("shows the fallback options when online installation is not configured", async ({ page }) => {
+    await page.goto("/?repo=owner/repo");
+
+    await expect(page.locator("#sign-in-btn")).toBeDisabled();
+    await expect(page.locator("#online-status")).toContainText(
+      "Online installation isn't configured yet"
+    );
+    await expect(page.locator("#alternative-options")).toHaveAttribute("open", "");
+    await expect(page.locator("#api-import-form")).toBeVisible();
+    await expect(page.locator("#alternative-options h3")).toHaveText([
+      "Install in the Azure portal",
+      "Generate an Azure CLI command",
+    ]);
+  });
+
   test("shows the path in repository when the path query parameter is provided", async ({ page }) => {
     await page.goto("/?repo=owner/repo&path=plugins/my-plugin");
 
