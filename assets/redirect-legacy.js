@@ -11,13 +11,21 @@
 // back to its own empty state for a malformed value, so an invalid `repo`
 // here only costs an extra redirect hop, not incorrect behavior.
 //
-// Note: the "install.html" filename is also referenced by
-// `getInstallPageUrl` in assets/app.js - keep both in sync if the install
-// page is ever renamed.
+// Resolving the install page's filename is shared with assets/app.js via
+// assets/install-page.js, which must load before this script. This is a
+// function declaration (not const/let) so it can coexist with app.js's own
+// helper of the same kind - both scripts load on index.html and share one
+// top-level lexical scope, where only var/function bindings (not let/const)
+// can safely be repeated.
+function legacyResolveInstallPageUrl(currentHref) {
+  return typeof require === "function"
+    ? require("./install-page.js").getInstallPageUrl(currentHref)
+    : getInstallPageUrl(currentHref);
+}
 
 function buildInstallPageRedirectUrl(currentHref) {
   const current = new URL(currentHref);
-  const target = new URL("install.html", current);
+  const target = new URL(legacyResolveInstallPageUrl(current.href));
   target.search = current.search;
   return target.toString();
 }

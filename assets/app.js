@@ -7,6 +7,18 @@
 //
 // Reference: https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url
 
+// Resolving the dedicated install page's URL is shared with
+// assets/redirect-legacy.js via assets/install-page.js. This is a function
+// declaration (not const/let) so it can coexist with redirect-legacy.js's
+// own helper of the same kind when both scripts load on index.html - all
+// classic <script> tags on a page share one top-level lexical scope, and
+// only var/function bindings (not let/const) can safely be repeated there.
+function appResolveInstallPageUrl(currentHref) {
+  return typeof require === "function"
+    ? require("./install-page.js").getInstallPageUrl(currentHref)
+    : getInstallPageUrl(currentHref);
+}
+
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
 const SRE_AGENT_API_DOCS_URL =
   "https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url#use-the-rest-api";
@@ -110,16 +122,6 @@ function buildInstallerUrl(baseUrl, repo, path, theme) {
     url.searchParams.set("theme", normalizedTheme);
   }
   return url.toString();
-}
-
-// The badge generator lives on the landing page, but generated badges always
-// need to link to the dedicated install page.
-//
-// Note: the "install.html" filename is also referenced by
-// `buildInstallPageRedirectUrl` in assets/redirect-legacy.js - keep both in
-// sync if the install page is ever renamed.
-function getInstallPageUrl(currentHref) {
-  return new URL("install.html", currentHref).toString();
 }
 
 function applyTheme(theme) {
@@ -949,7 +951,7 @@ function initGenerator() {
     }
 
     const installerUrl = buildInstallerUrl(
-      getInstallPageUrl(window.location.href),
+      appResolveInstallPageUrl(window.location.href),
       repo,
       pathInput,
       themeInput ? themeInput.value : DEFAULT_THEME
@@ -1009,7 +1011,6 @@ if (typeof module !== "undefined" && module.exports) {
     normalizeTheme,
     applyTheme,
     buildInstallerUrl,
-    getInstallPageUrl,
     buildBadgeMarkdown,
     trackException,
     copyToClipboard,
