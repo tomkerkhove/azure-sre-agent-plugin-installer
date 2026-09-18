@@ -17,12 +17,13 @@ usage analytics to [Azure Application Insights](https://learn.microsoft.com/azur
 ## No cookies
 
 The site sets **no cookies** and loads no third-party scripts, advertising or
-social media widgets. Two first-party browser storage entries are used:
+social media widgets. The following first-party browser storage entries are used:
 
 | Key | Storage | Purpose |
 | --- | --- | --- |
 | `sre-agent-plugin-installer.analytics-consent` | `localStorage` | Remembers your privacy choice. |
 | `sre-agent-plugin-installer.session-id` | `sessionStorage` | Random per-tab identifier used to group events of a single visit. Cleared when the tab closes and when consent is withdrawn. |
+| `sre-agent-plugin-installer.readme.<owner/repo>` | `sessionStorage` | Caches a sanitized, rendered public repository README to avoid repeated GitHub requests. Cleared when the tab closes. |
 
 ## What is collected
 
@@ -59,7 +60,16 @@ The page embeds the "Install to Azure SRE Agent" badge image from
 [shields.io](https://shields.io). Loading that image is a request to a third
 party and happens before any privacy choice is made, because it is part of the
 page itself rather than analytics. shields.io therefore sees your IP address and
-browser user agent. No other third-party content, scripts or trackers are used.
+browser user agent.
+
+When a public plugin repository is selected, the browser requests its rendered
+README from the [GitHub API](https://docs.github.com/rest/repos/contents#get-a-repository-readme)
+before any privacy choice is made. GitHub receives the requested public
+repository name, IP address and browser user agent. Images allowed by the
+sanitizer can also be loaded from GitHub, GitHub's content hosts or shields.io;
+image requests are made without a referrer. The sanitized README is cached only
+in the current tab's `sessionStorage` and is not sent to this site's analytics.
+No third-party scripts or trackers are used.
 
 ## Where data goes
 
