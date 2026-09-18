@@ -51,11 +51,12 @@ body {
 }
 
 .theme-toggle {
-  display: inline-grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  min-height: 44px;
+  padding: 9px 12px;
 }
 
 .theme-icon {
@@ -79,6 +80,18 @@ body {
 
 [data-theme="dark"] .theme-icon-sun {
   display: block;
+}
+
+.theme-toggle-label-light {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle-label-dark {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle-label-light {
+  display: inline;
 }
 
 header.hero {

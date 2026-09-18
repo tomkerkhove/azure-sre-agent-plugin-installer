@@ -5,12 +5,16 @@ async function expectThemeToggleState(toggle, theme) {
     await expect(toggle).toHaveAccessibleName("Switch to light theme");
     await expect(toggle.locator(".theme-icon-moon")).toBeHidden();
     await expect(toggle.locator(".theme-icon-sun")).toBeVisible();
+    await expect(toggle.locator(".theme-toggle-label-dark")).toBeHidden();
+    await expect(toggle.locator(".theme-toggle-label-light")).toBeVisible();
     return;
   }
 
   await expect(toggle).toHaveAccessibleName("Switch to dark theme");
   await expect(toggle.locator(".theme-icon-moon")).toBeVisible();
   await expect(toggle.locator(".theme-icon-sun")).toBeHidden();
+  await expect(toggle.locator(".theme-toggle-label-dark")).toBeVisible();
+  await expect(toggle.locator(".theme-toggle-label-light")).toBeHidden();
 }
 
 test.describe("Install to Azure SRE Agent site", () => {
