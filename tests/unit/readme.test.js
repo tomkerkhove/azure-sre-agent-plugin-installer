@@ -99,6 +99,29 @@ describe("sanitizeRepositoryReadmeHtml", () => {
       "https://github.com/tomkerkhove/azure-carbon-sre/raw/HEAD/images/plugin.png"
     );
   });
+
+  test("resolves relative URLs from a README outside the repository root", () => {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = sanitizeRepositoryReadmeHtml(
+      `
+        <a href="../CONTRIBUTING.md">Contribute</a>
+        <a href="#usage">Usage</a>
+        <img src="../images/plugin.png" alt="Plugin">
+      `,
+      "tomkerkhove/azure-carbon-sre",
+      "docs/guides/README.md"
+    );
+
+    expect(wrapper.querySelectorAll("a")[0].getAttribute("href")).toBe(
+      "https://github.com/tomkerkhove/azure-carbon-sre/blob/HEAD/docs/CONTRIBUTING.md"
+    );
+    expect(wrapper.querySelectorAll("a")[1].getAttribute("href")).toBe(
+      "https://github.com/tomkerkhove/azure-carbon-sre/blob/HEAD/docs/guides/README.md#usage"
+    );
+    expect(wrapper.querySelector("img").getAttribute("src")).toBe(
+      "https://github.com/tomkerkhove/azure-carbon-sre/raw/HEAD/docs/images/plugin.png"
+    );
+  });
 });
 
 describe("loadRepositoryReadme", () => {
@@ -154,6 +177,32 @@ describe("loadRepositoryReadme", () => {
     );
     expect(document.getElementById("repository-readme-content").hidden).toBe(
       true
+    );
+  });
+
+  test("uses the README path returned by GitHub for relative URLs", async () => {
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(
+        JSON.stringify({
+          content: '<img src="../images/plugin.png" alt="Plugin">',
+          path: "docs/guides/README.md",
+        })
+      ),
+    });
+
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+
+    expect(
+      document
+        .querySelector("#repository-readme-content img")
+        .getAttribute("src")
+    ).toBe(
+      "https://github.com/tomkerkhove/azure-carbon-sre/raw/HEAD/docs/images/plugin.png"
     );
   });
 });

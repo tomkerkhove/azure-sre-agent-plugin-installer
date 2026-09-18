@@ -292,11 +292,26 @@ async function readResponseTextWithLimit(response, maximumLength) {
   }
 }
 
-function sanitizeRepositoryReadmeHtml(markup, repo) {
+function sanitizeRepositoryReadmeHtml(markup, repo, readmePath = "") {
   const template = document.createElement("template");
   const repoUrl = `https://github.com/${repo}`;
-  const linkBaseUrl = `${repoUrl}/blob/HEAD/`;
-  const imageBaseUrl = `${repoUrl}/raw/HEAD/`;
+  const pathSegments =
+    typeof readmePath === "string"
+      ? readmePath
+          .split("/")
+          .filter((segment) => segment && segment !== "." && segment !== "..")
+          .map(encodeURIComponent)
+      : [];
+  const encodedReadmePath = pathSegments.join("/");
+  const encodedReadmeDirectory = pathSegments.slice(0, -1).join("/");
+  const directorySuffix = encodedReadmeDirectory
+    ? `${encodedReadmeDirectory}/`
+    : "";
+  const readmeUrl = encodedReadmePath
+    ? `${repoUrl}/blob/HEAD/${encodedReadmePath}`
+    : repoUrl;
+  const linkBaseUrl = `${repoUrl}/blob/HEAD/${directorySuffix}`;
+  const imageBaseUrl = `${repoUrl}/raw/HEAD/${directorySuffix}`;
   template.innerHTML = markup;
 
   Array.from(template.content.querySelectorAll("*")).forEach((element) => {
@@ -329,7 +344,7 @@ function sanitizeRepositoryReadmeHtml(markup, repo) {
     if (tagName === "a" && href) {
       try {
         const target = new URL(
-          href.startsWith("#") ? `${repoUrl}${href}` : href,
+          href.startsWith("#") ? `${readmeUrl}${href}` : href,
           linkBaseUrl
         );
         if (target.protocol === "https:") {
@@ -429,7 +444,8 @@ async function loadRepositoryReadme(repo) {
 
     const sanitizedMarkup = sanitizeRepositoryReadmeHtml(
       payload.content,
-      repo
+      repo,
+      payload.path
     );
     if (!sanitizedMarkup.trim()) throw new Error("README is empty");
 
