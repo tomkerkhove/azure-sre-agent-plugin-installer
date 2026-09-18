@@ -8,6 +8,14 @@ async function expectThemeToggleState(toggle, theme) {
   await expect(toggle.locator(".theme-toggle-label-light")).toHaveText(
     "Switch to light theme"
   );
+  await expect(toggle.locator(".theme-toggle-label-dark")).toHaveAttribute(
+    "aria-hidden",
+    "true"
+  );
+  await expect(toggle.locator(".theme-toggle-label-light")).toHaveAttribute(
+    "aria-hidden",
+    "true"
+  );
 
   if (theme === "dark") {
     await expect(toggle).toHaveAccessibleName("Switch to light theme");
