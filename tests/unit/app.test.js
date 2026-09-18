@@ -5,6 +5,7 @@ const {
   buildBadgeMarkdown,
   trackException,
 } = require("../../assets/app.js");
+const { getInstallPageUrl } = require("../../assets/install-page.js");
 
 describe("normalizeRepo", () => {
   test("returns null for empty/undefined input", () => {
@@ -77,6 +78,14 @@ describe("buildInstallerUrl", () => {
   test("omits the theme query parameter for an unsupported theme", () => {
     const url = buildInstallerUrl("https://example.com/", "owner/repo", "", "neon");
     expect(url).toBe("https://example.com/?repo=owner%2Frepo");
+  });
+
+  test("points at the dedicated install page, as the badge generator does", () => {
+    const url = buildInstallerUrl(
+      getInstallPageUrl("https://example.com/?theme=dark"),
+      "owner/repo"
+    );
+    expect(url).toBe("https://example.com/install.html?repo=owner%2Frepo");
   });
 });
 

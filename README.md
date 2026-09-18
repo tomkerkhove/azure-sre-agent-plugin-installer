@@ -1,6 +1,6 @@
 # Azure SRE Agent Plugin Installer
 
-[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/?repo=tomkerkhove/azure-carbon-sre)
+[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/install.html?repo=tomkerkhove/azure-carbon-sre)
 
 A "Deploy to Azure" button, but for [Azure SRE Agent](https://aka.ms/sreagent) plugins.
 
@@ -10,17 +10,25 @@ visitors can install the plugin into their own Azure SRE Agent instance with a
 single click. It's inspired by the
 [Deploy to Azure button](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-to-azure-button).
 
+The site has two pages, linked together through top-level navigation:
+
+* [`index.html`](./index.html) - the landing page with the **badge generator**,
+  for plugin authors who want to build an install link/badge for their README.
+* [`install.html`](./install.html) - the **install plugin** page that visitors
+  land on when they click a generated badge, with the `repo` query parameter
+  pointing at the plugin's GitHub repository.
+
 ## Adding the badge to your plugin's README
 
-Add a badge that links to this site with a `repo` query parameter pointing at
-your plugin's GitHub repository (and an optional `path` if the plugin lives in
-a subfolder):
+Add a badge that links to the install page with a `repo` query parameter
+pointing at your plugin's GitHub repository (and an optional `path` if the
+plugin lives in a subfolder):
 
 ```markdown
-[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/?repo=owner/repo)
+[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/install.html?repo=owner/repo)
 ```
 
-When someone clicks the badge, they land on a page that:
+When someone clicks the badge, they land on the install page that:
 
 1. Shows information about your plugin (source repository and, if provided,
    the path within the repository).
@@ -33,6 +41,11 @@ When someone clicks the badge, they land on a page that:
    [Install from URL](https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url)
    flow and a generated Azure CLI command as alternatives.
 
+> Badges generated before this site had separate landing and install pages
+> point at the landing page with a `repo` query parameter. The landing page
+> automatically redirects those links to the install page, so existing
+> badges keep working.
+
 ### Choosing a theme
 
 The page renders in a light theme by default. Visitors can use the theme button
@@ -40,13 +53,13 @@ at the top of the page to switch between light and dark colors. Add `theme=dark`
 to the link to render it in a dark theme initially:
 
 ```markdown
-[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/?repo=owner/repo&theme=dark)
+[![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/install.html?repo=owner/repo&theme=dark)
 ```
 
 Any other value falls back to the light theme. The badge generator on the site
 lets you pick the theme and includes it in the generated link.
 
-You can also use the **badge generator** on the site itself to build the
+You can also use the **badge generator** on the landing page to build the
 Markdown snippet for your repository without crafting the URL by hand.
 
 ## Configure the online installer
@@ -86,10 +99,12 @@ Azure CLI and portal alternatives.
 
 ## How it works
 
-* [`index.html`](./index.html), [`assets/app.js`](./assets/app.js) and
+* [`index.html`](./index.html) (badge generator), [`install.html`](./install.html)
+  (install flow), [`assets/app.js`](./assets/app.js) and
   [`assets/style.css`](./assets/style.css) implement the static site.
-* The site reads the `repo` and optional `path` and `theme` query string
-  parameters at page load and renders installation instructions accordingly.
+* The install page reads the `repo` and optional `path` and `theme` query
+  string parameters at page load and renders installation instructions
+  accordingly.
 * The online installer uses
   [`@azure/msal-browser`](https://www.npmjs.com/package/@azure/msal-browser)
   4 LTS with memory-only caching and popup interactions. Tokens remain in the
