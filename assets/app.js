@@ -18,6 +18,22 @@ if (typeof require === "function") {
   require("./install-page.js");
 }
 
+// The theme constants and normalization logic (and why they're exposed via
+// `window.ThemeInit`/`module.exports` instead of shared bare identifiers)
+// are documented in assets/theme-init.js, which must run before this file.
+const themeInit =
+  typeof window !== "undefined" && window.ThemeInit
+    ? window.ThemeInit
+    : typeof require === "function"
+    ? require("./theme-init.js")
+    : undefined;
+if (!themeInit) {
+  throw new Error(
+    'assets/theme-init.js must load before assets/app.js: its exports were not returned by require("./theme-init.js"), and window.ThemeInit is not defined either (see index.html/install.html for the expected script order).'
+  );
+}
+const { DEFAULT_THEME, SUPPORTED_THEMES, normalizeTheme } = themeInit;
+
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
 const SRE_AGENT_API_DOCS_URL =
   "https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url#use-the-rest-api";
@@ -41,8 +57,6 @@ Resources
 
 let authClient = null;
 let signedInAccount = null;
-const DEFAULT_THEME = "light";
-const SUPPORTED_THEMES = ["light", "dark"];
 const README_REQUEST_TIMEOUT_MS = 8000;
 const README_CACHE_PREFIX = "sre-agent-plugin-installer.readme.";
 const README_MAX_LENGTH = 500000;
@@ -152,13 +166,6 @@ function normalizeRepo(rawRepo) {
   }
 
   return repo;
-}
-
-function normalizeTheme(rawTheme) {
-  if (typeof rawTheme !== "string") return DEFAULT_THEME;
-
-  const theme = rawTheme.trim().toLowerCase();
-  return SUPPORTED_THEMES.includes(theme) ? theme : DEFAULT_THEME;
 }
 
 function buildInstallerUrl(baseUrl, repo, path, theme) {
