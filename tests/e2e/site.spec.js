@@ -426,7 +426,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page).toHaveURL(/\?repo=owner%2Frepo$/);
   });
 
-  test("preserves the landing page theme selection in the URL", async ({ page }) => {
+  test("toggles the theme and updates the URL on the landing page", async ({ page }) => {
     await page.goto("/");
 
     const toggle = page.locator("#theme-toggle");

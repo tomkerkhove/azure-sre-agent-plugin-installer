@@ -159,7 +159,7 @@ header.hero {
 }
 
 .page-intro a {
-  color: var(--readme-link);
+  color: var(--azure-blue);
 }
 
 @media (max-width: 480px) {
