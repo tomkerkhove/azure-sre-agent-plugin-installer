@@ -22,7 +22,11 @@ if (typeof require === "function") {
 // `window.ThemeInit`/`module.exports` instead of shared bare identifiers)
 // are documented in assets/theme-init.js, which must run before this file.
 const themeInit =
-  typeof require === "function" ? require("./theme-init.js") : window.ThemeInit;
+  typeof window !== "undefined" && window.ThemeInit
+    ? window.ThemeInit
+    : typeof require === "function"
+    ? require("./theme-init.js")
+    : undefined;
 if (!themeInit) {
   throw new Error(
     'assets/theme-init.js must load before assets/app.js: its exports were not returned by require("./theme-init.js"), and window.ThemeInit is not defined either (see index.html/install.html for the expected script order).'

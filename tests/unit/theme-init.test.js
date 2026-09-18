@@ -26,7 +26,7 @@ describe("theme-init normalizeTheme", () => {
 });
 
 describe("applyInitialTheme", () => {
-  test("sets data-theme from the `theme` query parameter before anything else runs", () => {
+  test("sets data-theme from the `theme` query parameter", () => {
     expect(applyInitialTheme("?theme=dark")).toBe("dark");
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
@@ -43,6 +43,14 @@ describe("applyInitialTheme", () => {
 });
 
 describe("module load side effect", () => {
+  const originalUrl = window.location.href;
+
+  afterEach(() => {
+    window.history.pushState(null, "", originalUrl);
+    document.documentElement.removeAttribute("data-theme");
+    jest.resetModules();
+  });
+
   test("applies the theme from window.location.search as soon as the module loads, without waiting for a function call", () => {
     // Regression test for the flash: theme-init.js must apply the theme as
     // an immediate side effect of loading, not only when some other code
