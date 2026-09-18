@@ -1,0 +1,47 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="azure" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#50E6FF"/>
+      <stop offset="100%" stop-color="#0078D4"/>
+    </linearGradient>
+
+    <linearGradient id="plugin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Cloud -->
+  <path d="M340 170
+           C330 115 285 80 230 80
+           C185 80 145 105 125 145
+           C70 150 30 195 30 250
+           C30 310 78 360 138 360
+           H340
+           C395 360 440 315 440 260
+           C440 205 397 170 340 170Z"
+        fill="url(#azure)"/>
+
+  <!-- Agent body -->
+  <circle cx="235" cy="245" r="75" fill="white"/>
+
+  <!-- Agent visor -->
+  <rect x="175" y="220" width="120" height="50" rx="25"
+        fill="#0B1F44"/>
+
+  <!-- Eyes -->
+  <circle cx="215" cy="245" r="10" fill="white"/>
+  <circle cx="255" cy="245" r="10" fill="white"/>
+
+  <!-- Plugin -->
+  <g transform="translate(180 300)">
+    <path fill="url(#plugin)"
+      d="M40 0
+         h40
+         c0 18 12 30 30 30
+         s30-12 30-30
+         h40
+         v40
+         c18 0 30 12 30 30
+         s-12 30-30 30
+         v
