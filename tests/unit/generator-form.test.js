@@ -71,4 +71,19 @@ describe("badge generator accessibility", () => {
     expect(output.hidden).toBe(false);
     expect(output.textContent).toContain("[![Install to Azure SRE Agent]");
   });
+
+  test("clears previously generated markdown when a later submission fails", () => {
+    setUpGenerator();
+    const repoField = document.getElementById("gen-repo");
+    repoField.value = "owner/repo";
+    submit();
+
+    repoField.value = "not-a-repository";
+    submit();
+
+    const output = document.getElementById("generator-output");
+    expect(output.hidden).toBe(true);
+    expect(output.textContent).toBe("");
+    expect(document.getElementById("generator-error").hidden).toBe(false);
+  });
 });

@@ -1296,6 +1296,9 @@ function initGenerator() {
 
     function reportError(message, field, reason) {
       if (errorElement) {
+        // Stale markdown from an earlier submission would contradict the error.
+        output.textContent = "";
+        output.hidden = true;
         errorElement.textContent = message;
         errorElement.hidden = false;
       } else {
