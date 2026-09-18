@@ -5,14 +5,27 @@ accounts and no login. To understand adoption (how many people use the site,
 which scenarios they use and which plugins get installed) it can send anonymous
 usage analytics to [Azure Application Insights](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview).
 
-## Consent first
+## Regional consent
 
-* Analytics are **off by default**. Nothing is sent until you press
-  **Allow analytics** in the banner.
+* For visitors with a European browser time zone, analytics are **off by
+  default**. Nothing is sent until you press **Allow analytics** in the banner.
+* Outside Europe, analytics start without showing the banner when first-party
+  preference storage is available.
+* If preference storage is unavailable, or the browser time zone is unavailable
+  or not known to be outside Europe, analytics remain off and the site asks for
+  consent.
 * Choosing **Decline** stops all telemetry; the choice is remembered in
-  `localStorage` (a strictly functional, first-party entry, not a cookie).
+  `localStorage`, or for the current tab in `sessionStorage` when local storage
+  is unavailable (strictly functional, first-party entries, not cookies).
 * You can change your choice at any time through **Change privacy choice** in
   the page footer.
+
+The site determines whether to ask from the IANA time zone reported by the
+browser. This happens locally: the site does not make an IP geolocation request
+or share data with another service to determine the region. Time zones are only
+an approximation of location and can be affected by device settings or travel.
+To avoid collecting before consent when the result is unclear, UTC,
+fixed-offset, unrecognized, missing and unreadable time zones require consent.
 
 ## No cookies
 
@@ -21,13 +34,14 @@ social media widgets. The following first-party browser storage entries are used
 
 | Key | Storage | Purpose |
 | --- | --- | --- |
-| `sre-agent-plugin-installer.analytics-consent` | `localStorage` | Remembers your privacy choice. |
+| `sre-agent-plugin-installer.analytics-consent` | `localStorage`, or `sessionStorage` fallback | Remembers your privacy choice. |
+| `sre-agent-plugin-installer.analytics-consent-probe` | `localStorage` or `sessionStorage` | Temporarily verifies that a privacy choice can be stored. It contains no consent choice and is removed immediately when storage permits. |
 | `sre-agent-plugin-installer.session-id` | `sessionStorage` | Random per-tab identifier used to group events of a single visit. Cleared when the tab closes and when consent is withdrawn. |
 | `sre-agent-plugin-installer.readme.<owner/repo>` | `sessionStorage` | Caches a sanitized, rendered public repository README to avoid repeated GitHub requests. Cleared when the tab closes. |
 
 ## What is collected
 
-Only after consent, and only these fields:
+When analytics are enabled, only these fields are collected:
 
 * A page view with the scenario (`plugin-install` or `badge-generator`).
 * Events describing what happened: `BadgeGenerated`, `BadgeMarkdownCopied`,
@@ -56,11 +70,8 @@ exception messages, stack traces, or free-text you type into the badge generator
 
 ## Third-party content
 
-The page embeds the "Install to Azure SRE Agent" badge image from
-[shields.io](https://shields.io). Loading that image is a request to a third
-party and happens before any privacy choice is made, because it is part of the
-page itself rather than analytics. shields.io therefore sees your IP address and
-browser user agent.
+The installer pages' branding, icons and social-preview images are served from
+this site's own GitHub Pages origin. They do not make third-party requests.
 
 When a public plugin repository is selected, the browser requests its rendered
 README from the [GitHub API](https://docs.github.com/rest/repos/contents#get-a-repository-readme)
