@@ -82,6 +82,10 @@ body {
   display: block;
 }
 
+.theme-toggle-label-dark {
+  display: inline;
+}
+
 .theme-toggle-label-light {
   display: none;
 }
