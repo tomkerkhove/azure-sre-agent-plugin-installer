@@ -320,6 +320,23 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page).toHaveURL(/\?repo=owner%2Frepo$/);
   });
 
+  test("shows the visible theme toggle label on the landing page", async ({ page }) => {
+    await page.goto("/");
+
+    const toggle = page.locator("#theme-toggle");
+    await expect(page.locator("footer #theme-toggle")).toBeVisible();
+    await expect(toggle).toHaveAccessibleName("Switch to dark theme");
+    await expect(toggle.locator(".theme-toggle-label-dark")).toBeVisible();
+    await expect(toggle.locator(".theme-toggle-label-light")).toBeHidden();
+
+    await toggle.click();
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(toggle).toHaveAccessibleName("Switch to light theme");
+    await expect(toggle.locator(".theme-toggle-label-dark")).toBeHidden();
+    await expect(toggle.locator(".theme-toggle-label-light")).toBeVisible();
+  });
+
   test("includes the selected theme in the generated badge markdown", async ({ page }) => {
     await page.goto("/");
 
