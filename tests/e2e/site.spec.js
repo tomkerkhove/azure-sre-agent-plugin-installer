@@ -1,6 +1,14 @@
 const { test, expect } = require("@playwright/test");
 
 async function expectThemeToggleState(toggle, theme) {
+  await expect(toggle.locator(".theme-toggle-label")).toHaveCount(2);
+  await expect(toggle.locator(".theme-toggle-label-dark")).toHaveText(
+    "Switch to dark theme"
+  );
+  await expect(toggle.locator(".theme-toggle-label-light")).toHaveText(
+    "Switch to light theme"
+  );
+
   if (theme === "dark") {
     await expect(toggle).toHaveAccessibleName("Switch to light theme");
     await expect(toggle.locator(".theme-icon-moon")).toBeHidden();
@@ -341,6 +349,22 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(sreAgentLink).toHaveAttribute("target", "_blank");
     await expect(sreAgentLink).toHaveAttribute("rel", "noopener noreferrer");
   });
+
+  for (const { name, path } of [
+    { name: "landing page", path: "/" },
+    { name: "install page", path: "/install.html" },
+  ]) {
+    test(`renders visible theme toggle labels on the ${name}`, async ({ page }) => {
+      await page.goto(path);
+
+      const toggle = page.locator("footer #theme-toggle");
+      await expect(toggle).toBeVisible();
+      await expectThemeToggleState(toggle, "light");
+      await expect(toggle.locator(".theme-toggle-label:visible")).toHaveText(
+        "Switch to dark theme"
+      );
+    });
+  }
 
   test("uses the light theme by default", async ({ page }) => {
     await page.goto("/");
