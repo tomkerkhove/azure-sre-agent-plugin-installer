@@ -198,7 +198,8 @@ function updateSiteNavLinks(theme) {
     // Resolve against the current URL only to compute the query string;
     // the relative path itself is preserved as authored so the link keeps
     // working from deployments served under a subpath, such as PR previews.
-    const [relativePath] = href.split("?");
+    const [beforeHash] = href.split("#");
+    const [relativePath] = beforeHash.split("?");
     const url = new URL(href, window.location.href);
 
     if (theme === DEFAULT_THEME) {
@@ -207,7 +208,10 @@ function updateSiteNavLinks(theme) {
       url.searchParams.set("theme", theme);
     }
 
-    link.setAttribute("href", url.search ? `${relativePath}${url.search}` : relativePath);
+    link.setAttribute(
+      "href",
+      `${relativePath}${url.search}${url.hash}`
+    );
   });
 }
 
