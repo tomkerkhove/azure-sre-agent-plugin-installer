@@ -8,6 +8,7 @@
   --surface-alt: #f3f7fb;
   --border: #d8e1ec;
   --radius: 10px;
+  --masthead-width: 560px;
   --readme-link: #0067b8;
   --button-secondary-hover: #e8ecf2;
   --shadow: rgba(0, 0, 0, 0.04);
@@ -50,11 +51,10 @@ body {
 }
 
 .theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   padding: 0;
 }
 
@@ -82,7 +82,7 @@ body {
 }
 
 header.hero {
-  width: min(100%, 560px);
+  width: min(100%, var(--masthead-width));
   margin: 0 auto 28px;
   padding: 20px 22px;
   background: var(--surface);
@@ -91,7 +91,7 @@ header.hero {
 }
 
 .brand-logo {
-  width: 100%;
+  width: min(100%, var(--masthead-width));
   aspect-ratio: 35 / 9;
   margin: 0;
   background: center / contain no-repeat url("logos/svg/logo-horizontal-light.svg");
@@ -141,7 +141,7 @@ header.hero {
 }
 
 .page-intro {
-  width: min(100%, 560px);
+  width: min(100%, var(--masthead-width));
   margin: 0 auto 16px;
 }
 
@@ -156,6 +156,10 @@ header.hero {
   margin: 0;
   color: var(--ink);
   font-size: 1.05rem;
+}
+
+.page-intro a {
+  color: var(--azure-blue);
 }
 
 @media (max-width: 480px) {
