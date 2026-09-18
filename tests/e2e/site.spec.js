@@ -363,6 +363,10 @@ test.describe("Install to Azure SRE Agent site", () => {
     { name: "install page", path: "/install.html" },
   ]) {
     test(`renders visible theme toggle labels on the ${name}`, async ({ page }) => {
+      await page.addInitScript(() => {
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+      });
       await page.goto(path);
 
       const toggle = page.locator("footer #theme-toggle");
