@@ -326,7 +326,10 @@ test.describe("Install to Azure SRE Agent site", () => {
     const sreAgentLink = page.locator(
       '.page-intro a[href="https://aka.ms/sreagent"]'
     );
-    await expect(sreAgentLink).toHaveAttribute("href", "https://aka.ms/sreagent");
+    await expect(sreAgentLink).toBeVisible();
+    await expect(sreAgentLink).toHaveText("Azure SRE Agent");
+    await expect(sreAgentLink).toHaveAttribute("target", "_blank");
+    await expect(sreAgentLink).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   test("uses the light theme by default", async ({ page }) => {
