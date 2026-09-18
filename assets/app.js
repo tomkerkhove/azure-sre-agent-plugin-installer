@@ -385,9 +385,16 @@ function sanitizeRepositoryReadmeHtml(markup, repo) {
   return template.innerHTML;
 }
 
-function parseJsonOrNull(text) {
+/**
+ * Returns a JSON object when the response is an object wrapper, or null when
+ * the response is rendered HTML or another JSON primitive.
+ */
+function parseJsonObjectOrNull(text) {
   try {
-    return JSON.parse(text);
+    const value = JSON.parse(text);
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : null;
   } catch (error) {
     if (error instanceof SyntaxError) return null;
     throw error;
@@ -431,7 +438,7 @@ async function loadRepositoryReadme(repo) {
       response,
       README_MAX_LENGTH
     );
-    const payload = parseJsonOrNull(responseText);
+    const payload = parseJsonObjectOrNull(responseText);
     let markup = responseText;
     if (payload) {
       if (typeof payload.content !== "string") {

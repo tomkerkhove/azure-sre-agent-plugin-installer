@@ -153,6 +153,26 @@ describe("loadRepositoryReadme", () => {
     );
   });
 
+  test("treats JSON primitives as direct README markup", async () => {
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue('"Azure Carbon SRE"'),
+    });
+
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+
+    expect(document.getElementById("repository-readme-content").textContent).toBe(
+      '"Azure Carbon SRE"'
+    );
+    expect(document.getElementById("repository-readme-content").hidden).toBe(
+      false
+    );
+  });
+
   test("shows the fallback when the GitHub request times out", async () => {
     jest.useFakeTimers();
     document.body.innerHTML = `
