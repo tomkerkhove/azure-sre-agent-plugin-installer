@@ -122,6 +122,40 @@ header.hero {
   background-image: url("logos/svg/logo-horizontal-dark.svg");
 }
 
+/* Keyboard users can jump past the header and navigation straight to the page
+   content; the link only becomes visible once it receives focus. */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 20;
+  padding: 10px 16px;
+  border-radius: 6px;
+  /* Fixed blue rather than --azure-blue: the dark theme's lighter accent only
+     reaches ~3.3:1 against white text, below the 4.5:1 requirement. */
+  background: #0067b8;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+/* The skip link target is focusable via tabindex="-1" so activating the link
+   really moves focus, but it must not show an outline of its own. */
+#main-content:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 3px solid var(--azure-blue);
+  outline-offset: 2px;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -572,4 +606,33 @@ footer a {
 
 #consent-manage a {
   color: var(--muted);
+}
+
+/* Resetting the privacy choice is an action, not navigation, so it is a button
+   that is styled to look like the surrounding footer links. */
+.link-button {
+  display: inline;
+  vertical-align: baseline;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+}
+
+.link-button:hover {
+  background: none;
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

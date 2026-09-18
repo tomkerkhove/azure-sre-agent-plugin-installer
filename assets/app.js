@@ -1183,8 +1183,14 @@ function renderInstallCard(repo, path) {
         <li>Paste the repository below and confirm the install.</li>
       </ol>
       <div class="copy-row">
-        <input id="repo-value" type="text" value="${repo}" readonly />
-        <button id="copy-repo-btn" type="button">Copy</button>
+        <input
+          id="repo-value"
+          type="text"
+          value="${repo}"
+          aria-label="Repository to paste in the Azure portal"
+          readonly
+        />
+        <button id="copy-repo-btn" type="button" aria-label="Copy repository">Copy</button>
       </div>
       <p class="hint">Don't have an Azure SRE Agent yet? Create one first, then come back to this page.</p>
       <div class="actions">
@@ -1277,33 +1283,148 @@ function renderInstallCard(repo, path) {
   document.getElementById("empty-state").hidden = true;
 }
 
+// ---------------------------------------------------------------------------
+// Accessible form validation helpers
+//
+// Shared by the badge generator (index.html) and the plugin details form
+// (install.html). Together they announce a validation message, associate it
+// with the field that caused it and move focus there.
+// ---------------------------------------------------------------------------
+
+// Screen reader users only hear an error when it is announced and tied to the
+// field that caused it, so every validation failure sets `aria-invalid` and
+// adds the message element to the field's description. `aria-describedby` is a
+// token list, so the error id is appended to (and later removed from) any
+// descriptions the field already had instead of replacing them.
+function describedByTokens(input) {
+  return (input.getAttribute("aria-describedby") || "")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function setDescribedByTokens(input, tokens) {
+  if (tokens.length) {
+    input.setAttribute("aria-describedby", tokens.join(" "));
+  } else {
+    input.removeAttribute("aria-describedby");
+  }
+}
+
+function markFieldInvalid(input, errorElement) {
+  input.setAttribute("aria-invalid", "true");
+  const tokens = describedByTokens(input);
+  if (!tokens.includes(errorElement.id)) {
+    tokens.push(errorElement.id);
+  }
+  setDescribedByTokens(input, tokens);
+}
+
+function clearFieldErrors(inputs, errorElement) {
+  inputs.forEach((input) => {
+    input.removeAttribute("aria-invalid");
+    // Only drop the description this helper added, so any other description
+    // (for example a hint) stays associated with the field.
+    setDescribedByTokens(
+      input,
+      describedByTokens(input).filter((token) => token !== errorElement.id)
+    );
+  });
+  errorElement.textContent = "";
+  errorElement.hidden = true;
+}
+
+// Both forms report validation problems the same way: show the message in an
+// alert region, associate it with the offending field and move focus there so
+// keyboard and screen reader users land on what needs correcting.
+function reportFieldError({ error, field, message }) {
+  error.textContent = message;
+  error.hidden = false;
+  markFieldInvalid(field, error);
+  field.focus();
+}
+
+// A form that is missing part of its markup (most importantly the alert region
+// it needs to report validation failures accessibly) is left unwired, and the
+// broken markup is reported instead of failing silently.
+function initFormElements(formId, elementIds) {
+  const form = document.getElementById(formId);
+  if (!form) return null;
+
+  const elements = { form };
+  const missing = [];
+  Object.keys(elementIds).forEach((key) => {
+    const element = document.getElementById(elementIds[key]);
+    if (!element) {
+      missing.push(`#${elementIds[key]}`);
+      return;
+    }
+    elements[key] = element;
+  });
+
+  if (missing.length) {
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn(
+        `assets/app.js: #${formId} was not initialized because ${missing.join(
+          ", "
+        )} ${missing.length === 1 ? "is" : "are"} missing.`
+      );
+    }
+    return null;
+  }
+
+  return elements;
+}
+
+// ---------------------------------------------------------------------------
+
 function initGenerator() {
-  const form = document.getElementById("generator-form");
-  const output = document.getElementById("generator-output");
-  if (!form || !output) return;
+  const elements = initFormElements("generator-form", {
+    output: "generator-output",
+    error: "generator-error",
+  });
+  if (!elements) return;
+  const { form, output, error } = elements;
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
 
-    const repoInput = document.getElementById("gen-repo").value;
-    const rawPath = document.getElementById("gen-path").value.trim();
+    const repoField = document.getElementById("gen-repo");
+    const pathField = document.getElementById("gen-path");
+    const repoInput = repoField.value;
+    const rawPath = pathField.value.trim();
     const pathInput = normalizePath(rawPath);
     const themeInput = document.getElementById("gen-theme");
     const repo = normalizeRepo(repoInput);
 
+    clearFieldErrors([repoField, pathField], error);
+
+    let failure = null;
     if (rawPath && !pathInput) {
-      output.hidden = false;
-      output.textContent =
-        "Please enter a valid path within the repository, e.g. plugins/my-plugin";
-      track("BadgeGenerationFailed", { reason: "invalid-path" });
-      return;
+      failure = {
+        field: pathField,
+        reason: "invalid-path",
+        message:
+          "Please enter a valid path within the repository, e.g. plugins/my-plugin",
+      };
+    } else if (!repo) {
+      failure = {
+        field: repoField,
+        reason: "invalid-repository",
+        message:
+          "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo",
+      };
     }
 
-    if (!repo) {
-      output.hidden = false;
-      output.textContent =
-        "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo";
-      track("BadgeGenerationFailed", { reason: "invalid-repository" });
+    if (failure) {
+      // Stale markdown from an earlier submission would contradict the error.
+      output.textContent = "";
+      output.hidden = true;
+      reportFieldError({
+        error,
+        field: failure.field,
+        message: failure.message,
+      });
+      track("BadgeGenerationFailed", { reason: failure.reason });
       return;
     }
 
@@ -1333,28 +1454,40 @@ function initGenerator() {
 }
 
 function initPluginDetailsForm() {
-  const form = document.getElementById("plugin-details-form");
-  if (!form) return;
+  const elements = initFormElements("plugin-details-form", {
+    error: "plugin-details-error",
+  });
+  if (!elements) return;
+  const { form, error } = elements;
 
-  const error = document.getElementById("plugin-details-error");
   form.addEventListener("submit", (event) => {
     event.preventDefault();
 
-    const repo = normalizeRepo(document.getElementById("plugin-repo").value);
-    const rawPath = document.getElementById("plugin-path").value.trim();
+    const repoField = document.getElementById("plugin-repo");
+    const pathField = document.getElementById("plugin-path");
+    const repo = normalizeRepo(repoField.value);
+    const rawPath = pathField.value.trim();
     const path = normalizePath(rawPath);
 
+    clearFieldErrors([repoField, pathField], error);
+
     if (!repo) {
-      error.textContent =
-        "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo";
-      error.hidden = false;
+      reportFieldError({
+        error,
+        field: repoField,
+        message:
+          "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo",
+      });
       return;
     }
 
     if (rawPath && !path) {
-      error.textContent =
-        "Please enter a valid path within the repository, e.g. plugins/my-plugin";
-      error.hidden = false;
+      reportFieldError({
+        error,
+        field: pathField,
+        message:
+          "Please enter a valid path within the repository, e.g. plugins/my-plugin",
+      });
       return;
     }
 
@@ -1422,6 +1555,7 @@ if (typeof module !== "undefined" && module.exports) {
     trackException,
     copyToClipboard,
     initPluginDetailsForm,
+    initGenerator,
     DEFAULT_THEME,
     SUPPORTED_THEMES,
     updateSiteNavLinks,
