@@ -7,6 +7,17 @@
 //
 // Reference: https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url
 
+// Resolving the dedicated install page's URL is shared with
+// assets/redirect-legacy.js via assets/install-page.js, which declares
+// `getInstallPageUrl` as a global for other same-page scripts to call
+// directly (all classic <script> tags share one top-level scope). In Node,
+// requiring it here has the side effect of attaching that same global so
+// this file's own use of `getInstallPageUrl` below, and its unit tests,
+// work the same way.
+if (typeof require === "function") {
+  require("./install-page.js");
+}
+
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
 const SRE_AGENT_API_DOCS_URL =
   "https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url#use-the-rest-api";
@@ -98,6 +109,16 @@ function track(name, properties) {
   if (typeof window !== "undefined" && window.siteTelemetry) {
     window.siteTelemetry.trackEvent(name, properties);
   }
+}
+
+function trackException(error, properties) {
+  if (typeof window === "undefined" || !window.siteTelemetry) return;
+
+  const details = Object.assign({}, properties || {});
+  if (error && Number.isInteger(error.status)) {
+    details.status = error.status;
+  }
+  window.siteTelemetry.trackException(error, details);
 }
 
 // Custom metric so plugin installs can be counted and split per repository in
@@ -907,6 +928,7 @@ function initOnlineInstaller(repo, path) {
       );
     } catch (error) {
       alternatives.open = true;
+      trackException(error, { handled: true, operation: "list-agents" });
       setStatus(status, getFriendlyError(error, "list"), "error");
     } finally {
       signInBtn.disabled = false;
@@ -1008,6 +1030,7 @@ function initOnlineInstaller(repo, path) {
       );
     } catch (error) {
       alternatives.open = true;
+      trackException(error, { handled: true, operation: "install-plugin" });
       setStatus(status, getFriendlyError(error, "install"), "error");
     } finally {
       installBtn.disabled = !canAttemptInstallation(agents[index]);
@@ -1214,7 +1237,7 @@ function initGenerator() {
     }
 
     const installerUrl = buildInstallerUrl(
-      window.location.origin + window.location.pathname,
+      getInstallPageUrl(window.location.href),
       repo,
       pathInput,
       themeInput ? themeInput.value : DEFAULT_THEME
@@ -1281,6 +1304,7 @@ if (typeof module !== "undefined" && module.exports) {
     readResponseTextWithLimit,
     README_REQUEST_TIMEOUT_MS,
     README_MAX_LENGTH,
+    trackException,
     copyToClipboard,
     DEFAULT_THEME,
     SUPPORTED_THEMES,

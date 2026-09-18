@@ -5,17 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta
     http-equiv="Content-Security-Policy"
-    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://github.com https://img.shields.io https://*.githubusercontent.com; connect-src https://api.github.com https://login.microsoftonline.com https://management.azure.com https://*.azuresre.ai https://dc.services.visualstudio.com https://*.applicationinsights.azure.com https://*.monitor.azure.com https://*.applicationinsights.azure.cn https://*.monitor.azure.cn https://*.applicationinsights.azure.us https://*.monitor.azure.us; frame-src https://login.microsoftonline.com; base-uri 'none'; form-action 'self'"
+    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://img.shields.io; connect-src https://login.microsoftonline.com https://management.azure.com https://*.azuresre.ai https://dc.services.visualstudio.com https://*.applicationinsights.azure.com https://*.monitor.azure.com https://*.applicationinsights.azure.cn https://*.monitor.azure.cn https://*.applicationinsights.azure.us https://*.monitor.azure.us; frame-src https://login.microsoftonline.com; base-uri 'none'; form-action 'self'"
   />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
-  <title>Generate a badge - Install to Azure SRE Agent</title>
+  <title>Install a plugin - Install to Azure SRE Agent</title>
   <meta
     name="description"
-    content="Generate an 'Install to Azure SRE Agent' badge for your own plugin repository."
+    content="Install a community plugin to your Azure SRE Agent instance using a repo link, similar to a 'Deploy to Azure' button."
   />
   <link rel="stylesheet" href="assets/style.css" />
-  <script src="assets/install-page.js"></script>
-  <script src="assets/redirect-legacy.js"></script>
 </head>
 <body>
   <div class="wrapper">
@@ -30,55 +28,28 @@
       <p>
         A "Deploy to Azure" button, but for
         <a href="https://aka.ms/sreagent" target="_blank" rel="noopener noreferrer">Azure SRE Agent</a>
-        plugins. Generate a badge for your plugin's README below.
+        plugins. Install a plugin into your own agent below.
       </p>
     </header>
 
     <nav class="site-nav" aria-label="Primary">
-      <a class="site-nav-link" href="index.html" aria-current="page">Generate a badge</a>
-      <a class="site-nav-link" href="install.html">Install a plugin</a>
+      <a class="site-nav-link" href="index.html">Generate a badge</a>
+      <a class="site-nav-link" href="install.html" aria-current="page">Install a plugin</a>
     </nav>
 
-    <section class="card">
-      <h2>Generate your own badge</h2>
-      <p class="hint">
-        Point people at your Azure SRE Agent plugin, so they can install it into their own
-        instance with one click - similar to the
-        <a
-          href="https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-to-azure-button"
-          target="_blank"
-          rel="noopener noreferrer"
-          >Deploy to Azure button</a
-        >.
+    <section class="card" id="install-card" hidden></section>
+
+    <section class="card empty-state" id="empty-state">
+      <h2>No plugin specified</h2>
+      <p>
+        Link to this page with a <code>repo</code> query parameter to guide visitors through
+        installing your plugin, for example:
       </p>
-      <form id="generator-form">
-        <div class="field">
-          <label for="gen-repo">GitHub repository</label>
-          <input
-            id="gen-repo"
-            type="text"
-            placeholder="owner/repo or https://github.com/owner/repo"
-            required
-          />
-        </div>
-        <div class="field">
-          <label for="gen-path">Path in repository (optional)</label>
-          <input id="gen-path" type="text" placeholder="plugins/my-plugin" />
-        </div>
-        <div class="field">
-          <label for="gen-theme">Theme</label>
-          <select id="gen-theme">
-            <option value="light" selected>Light (default)</option>
-            <option value="dark">Dark</option>
-          </select>
-          <p class="hint">The theme is stored in the generated link, so visitors see the page in the theme you pick.</p>
-        </div>
-        <div class="actions">
-          <button type="submit">Generate badge markdown</button>
-          <button type="button" class="secondary" id="copy-badge-btn">Copy</button>
-        </div>
-      </form>
-      <pre class="output" id="generator-output" hidden></pre>
+      <pre class="output">https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/install.html?repo=owner/repo</pre>
+      <p class="hint">
+        Don't have a link yet? Use the
+        <a href="index.html">badge generator</a> to build one for your own plugin.
+      </p>
     </section>
 
     <footer>
@@ -138,6 +109,7 @@
   <script src="assets/config.js"></script>
   <script src="assets/telemetry.js"></script>
   <script src="assets/vendor/msal-browser.min.js"></script>
+  <script src="assets/install-page.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>

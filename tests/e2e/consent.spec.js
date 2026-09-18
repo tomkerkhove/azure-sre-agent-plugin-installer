@@ -7,22 +7,32 @@ const CONNECTION_STRING =
 
 // The deployed site only enables analytics when the Pages workflow injects the
 // ingestion connection string, so it is stubbed here before any script runs.
-async function enableTelemetry(page, ingestionRequests) {
+async function enableTelemetry(page, ingestionRequests, enableInstaller = false) {
   // Stand in for the config.js that the Pages workflow generates from the
   // repository secret.
   await page.route("**/assets/config.js", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "text/javascript",
-      body:
+      body: [
         "window.SITE_CONFIG = " +
-        JSON.stringify({
-          telemetry: {
-            connectionString: CONNECTION_STRING,
-            cloudRole: "sre-agent-plugin-installer",
-          },
-        }) +
-        ";",
+          JSON.stringify({
+            telemetry: {
+              connectionString: CONNECTION_STRING,
+              cloudRole: "sre-agent-plugin-installer",
+            },
+          }) +
+          ";",
+        enableInstaller
+          ? "window.SRE_AGENT_INSTALLER_CONFIG = " +
+            JSON.stringify({
+              clientId: "11111111-1111-4111-8111-111111111111",
+              tenantId: "organizations",
+              dataPlaneScope: "https://azuresre.dev/.default",
+            }) +
+            ";"
+          : "",
+      ].join("\n"),
     });
   });
 
@@ -35,6 +45,39 @@ async function enableTelemetry(page, ingestionRequests) {
   await page.route(`${INGESTION_HOST}/**`, async (route) => {
     ingestionRequests.push(JSON.parse(route.request().postData() || "[]"));
     await route.fulfill({ status: 200, body: "{}" });
+  });
+}
+
+async function enableOnlineInstaller(page, ingestionRequests) {
+  await enableTelemetry(page, ingestionRequests, true);
+  await page.route("**/assets/vendor/msal-browser.min.js", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/javascript",
+      body: `
+        window.msal = {
+          InteractionRequiredAuthError: class InteractionRequiredAuthError extends Error {},
+          PublicClientApplication: class PublicClientApplication {
+            async initialize() {}
+            async loginPopup() {
+              return {
+                account: { username: "visitor@example.com" },
+                accessToken: "management-token"
+              };
+            }
+            async acquireTokenPopup() {
+              return {
+                account: { username: "visitor@example.com" },
+                accessToken: "data-plane-token"
+              };
+            }
+            async acquireTokenSilent() {
+              return { accessToken: "management-token" };
+            }
+          }
+        };
+      `,
+    });
   });
 }
 
@@ -62,13 +105,19 @@ test.describe("Privacy consent", () => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     await expect(page.locator("#consent-banner")).toBeVisible();
     await expect(page.locator("#consent-accept")).toBeVisible();
     await expect(page.locator("#consent-decline")).toBeVisible();
     await expect(page.locator("#consent-status")).toHaveText(
       "Anonymous analytics: awaiting your choice."
+    );
+    await expect(page.locator("#consent-banner")).toContainText(
+      "usage and reliability analytics"
+    );
+    await expect(page.locator("#consent-banner")).toContainText(
+      "application error categories"
     );
 
     await page.locator("#copy-repo-btn").click();
@@ -80,7 +129,7 @@ test.describe("Privacy consent", () => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
     await page.locator("#copy-repo-btn").click();
 
@@ -92,7 +141,7 @@ test.describe("Privacy consent", () => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
 
     await expect(page.locator("#consent-banner")).toBeHidden();
@@ -115,7 +164,7 @@ test.describe("Privacy consent", () => {
     await enableTelemetry(page, ingestionRequests);
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
     await page.locator("#copy-repo-btn").click();
 
@@ -137,6 +186,170 @@ test.describe("Privacy consent", () => {
     expect(metric.data.baseData.properties.repository).toBe("owner/repo");
   });
 
+  test("reports error categories without exception details", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+
+    await page.goto("/");
+    await page.locator("#consent-accept").click();
+    await page.evaluate(() => {
+      const error = new TypeError("token=private-value");
+      error.stack = "private stack trace";
+      window.dispatchEvent(
+        new ErrorEvent("error", {
+          error,
+          message: error.message,
+        })
+      );
+    });
+
+    await expect
+      .poll(
+        () =>
+          envelopes(ingestionRequests).filter(
+            (envelope) => envelope.data.baseType === "ExceptionData"
+          ).length,
+        { timeout: 5000 }
+      )
+      .toBe(1);
+
+    const exception = envelopes(ingestionRequests).find(
+      (envelope) => envelope.data.baseType === "ExceptionData"
+    );
+    expect(exception.data.baseData.exceptions[0]).toEqual({
+      id: 1,
+      outerId: 0,
+      typeName: "TypeError",
+      message: "An application exception occurred.",
+      hasFullStack: false,
+      stack: "Stack trace omitted for privacy.",
+      parsedStack: [],
+    });
+    expect(exception.data.baseData.properties.source).toBe("window-error");
+    expect(JSON.stringify(exception)).not.toContain("private-value");
+    expect(JSON.stringify(exception)).not.toContain("private stack trace");
+  });
+
+  test("reports agent discovery failures with safe operation context", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableOnlineInstaller(page, ingestionRequests);
+    await page.route("https://management.azure.com/**", async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "private discovery details" }),
+      });
+    });
+
+    await page.goto("/install.html?repo=owner/plugin");
+    await page.locator("#consent-accept").click();
+    await page.locator("#sign-in-btn").click();
+
+    await expect(page.locator("#online-status")).toContainText(
+      "Azure returned: private discovery details"
+    );
+    await expect
+      .poll(
+        () =>
+          envelopes(ingestionRequests).find(
+            (envelope) =>
+              envelope.data.baseType === "ExceptionData" &&
+              envelope.data.baseData.properties.operation === "list-agents"
+          ),
+        { timeout: 5000 }
+      )
+      .toBeTruthy();
+
+    const exception = envelopes(ingestionRequests).find(
+      (envelope) =>
+        envelope.data.baseType === "ExceptionData" &&
+        envelope.data.baseData.properties.operation === "list-agents"
+    );
+    expect(exception.data.baseData.properties).toEqual({
+      handled: "true",
+      operation: "list-agents",
+      status: "500",
+    });
+    expect(JSON.stringify(exception)).not.toContain("private discovery details");
+  });
+
+  test("reports plugin installation failures with safe operation context", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableOnlineInstaller(page, ingestionRequests);
+    await page.route("https://management.azure.com/**", async (route) => {
+      if (route.request().url().includes("Microsoft.ResourceGraph/resources")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            data: [
+              {
+                id: "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.App/agents/demo",
+                name: "demo",
+                subscriptionId: "sub",
+                resourceGroup: "rg",
+                location: "eastus",
+                agentEndpoint: "https://demo.hash.eastus.azuresre.ai",
+                powerState: "Running",
+              },
+            ],
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          properties: {
+            agentEndpoint: "https://demo.hash.eastus.azuresre.ai",
+            powerState: "Running",
+          },
+        }),
+      });
+    });
+    await page.route("https://demo.hash.eastus.azuresre.ai/**", async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "private installation details" }),
+      });
+    });
+
+    await page.goto("/install.html?repo=owner/plugin");
+    await page.locator("#consent-accept").click();
+    await page.locator("#sign-in-btn").click();
+    await page.locator("#agent-select").selectOption("0");
+    await page.locator("#install-btn").click();
+
+    await expect(page.locator("#online-status")).toContainText(
+      "Azure returned: private installation details"
+    );
+    await expect
+      .poll(
+        () =>
+          envelopes(ingestionRequests).find(
+            (envelope) =>
+              envelope.data.baseType === "ExceptionData" &&
+              envelope.data.baseData.properties.operation === "install-plugin"
+          ),
+        { timeout: 5000 }
+      )
+      .toBeTruthy();
+
+    const exception = envelopes(ingestionRequests).find(
+      (envelope) =>
+        envelope.data.baseType === "ExceptionData" &&
+        envelope.data.baseData.properties.operation === "install-plugin"
+    );
+    expect(exception.data.baseData.properties).toEqual({
+      handled: "true",
+      operation: "install-plugin",
+      status: "500",
+    });
+    expect(JSON.stringify(exception)).not.toContain("private installation details");
+  });
+
   test("does not report repository copying when clipboard writing fails", async ({ page }) => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
@@ -149,7 +362,7 @@ test.describe("Privacy consent", () => {
       });
     });
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
     await page.locator("#copy-repo-btn").click();
     await page.waitForTimeout(250);
@@ -262,7 +475,7 @@ test.describe("Privacy consent", () => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-decline").click();
 
     await expect(page.locator("#consent-banner")).toBeHidden();
@@ -280,7 +493,7 @@ test.describe("Privacy consent", () => {
     await page.goto("/");
     await page.locator("#consent-decline").click();
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await expect(page.locator("#consent-banner")).toBeHidden();
     await page.waitForTimeout(250);
     expect(ingestionRequests).toHaveLength(0);

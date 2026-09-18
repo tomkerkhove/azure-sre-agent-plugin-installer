@@ -96,6 +96,33 @@ header.hero p {
   height: 32px;
 }
 
+.site-nav {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.site-nav-link {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.site-nav-link:hover {
+  background: var(--button-secondary-hover);
+}
+
+.site-nav-link[aria-current="page"] {
+  color: var(--azure-blue);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
