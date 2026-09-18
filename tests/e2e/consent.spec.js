@@ -86,6 +86,12 @@ function envelopes(ingestionRequests) {
 }
 
 test.describe("Privacy consent", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route("https://api.github.com/**", async (route) => {
+      await route.fulfill({ status: 404, body: "{}" });
+    });
+  });
+
   test("hides the banner when analytics are not configured", async ({ page }) => {
     await page.goto("/");
 
