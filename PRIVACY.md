@@ -56,11 +56,8 @@ exception messages, stack traces, or free-text you type into the badge generator
 
 ## Third-party content
 
-The page embeds the "Install to Azure SRE Agent" badge image from
-[shields.io](https://shields.io). Loading that image is a request to a third
-party and happens before any privacy choice is made, because it is part of the
-page itself rather than analytics. shields.io therefore sees your IP address and
-browser user agent.
+The site branding, icons and social-preview images are served from this site's
+own GitHub Pages origin. They do not make third-party requests.
 
 When a public plugin repository is selected, the browser requests its rendered
 README from the [GitHub API](https://docs.github.com/rest/repos/contents#get-a-repository-readme)

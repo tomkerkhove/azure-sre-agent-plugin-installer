@@ -279,12 +279,32 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.goto("/");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(page.locator(".brand-logo-light")).toBeVisible();
+    await expect(page.locator(".brand-logo-light")).toHaveAttribute(
+      "src",
+      "assets/logos/svg/logo-horizontal-light.svg"
+    );
+    await expect(page.locator(".brand-logo-dark")).toBeHidden();
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
+      "href",
+      "assets/logos/favicon/favicon.ico"
+    );
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+      "content",
+      "https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/assets/logos/png/github-social-card-light-1280x640.png"
+    );
   });
 
   test("uses the dark theme when the theme query parameter is dark", async ({ page }) => {
     await page.goto("/install.html?repo=owner/repo&theme=dark");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator(".brand-logo-light")).toBeHidden();
+    await expect(page.locator(".brand-logo-dark")).toBeVisible();
+    await expect(page.locator(".brand-logo-dark")).toHaveAttribute(
+      "src",
+      "assets/logos/svg/logo-horizontal-dark.svg"
+    );
   });
 
   test("falls back to the light theme for an unsupported theme", async ({ page }) => {

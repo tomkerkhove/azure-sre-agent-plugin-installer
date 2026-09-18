@@ -1,5 +1,10 @@
 # Azure SRE Agent Plugin Installer
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logos/svg/logo-horizontal-dark.svg">
+  <img src="assets/logos/svg/logo-horizontal-light.svg" alt="Azure SRE Agent Plugin Installer">
+</picture>
+
 [![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/install.html?repo=tomkerkhove/azure-carbon-sre)
 
 A "Deploy to Azure" button, but for [Azure SRE Agent](https://aka.ms/sreagent) plugins.
