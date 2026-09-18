@@ -109,6 +109,7 @@ describe("loadRepositoryReadme", () => {
     `;
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
+      headers: { get: jest.fn().mockReturnValue("application/json") },
       text: jest.fn().mockResolvedValue(
         JSON.stringify({ content: "<h1>Azure Carbon SRE</h1>" })
       ),
@@ -126,6 +127,93 @@ describe("loadRepositoryReadme", () => {
       document.querySelector("#repository-readme-content h1").textContent
     ).toBe("Azure Carbon SRE");
     expect(document.getElementById("repository-readme-status").hidden).toBe(
+      true
+    );
+  });
+
+  test("renders a README returned directly as HTML", async () => {
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: jest.fn().mockReturnValue("text/html; charset=utf-8") },
+      text: jest.fn().mockResolvedValue("<h1>Azure Carbon SRE</h1>"),
+    });
+
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+
+    expect(
+      document.querySelector("#repository-readme-content h1").textContent
+    ).toBe("Azure Carbon SRE");
+    expect(document.getElementById("repository-readme-content").hidden).toBe(
+      false
+    );
+    expect(document.getElementById("repository-readme-status").hidden).toBe(
+      true
+    );
+  });
+
+  test("shows the fallback when a JSON primitive is returned", async () => {
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: jest.fn().mockReturnValue("application/json") },
+      text: jest.fn().mockResolvedValue('"Azure Carbon SRE"'),
+    });
+
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+
+    expect(document.getElementById("repository-readme-status").textContent).toBe(
+      "The README preview is unavailable. View it on GitHub instead."
+    );
+    expect(document.getElementById("repository-readme-content").hidden).toBe(
+      true
+    );
+  });
+
+  test("shows the fallback when a JSON array is returned", async () => {
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: jest.fn().mockReturnValue("application/json") },
+      text: jest.fn().mockResolvedValue('["Azure Carbon SRE"]'),
+    });
+
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+
+    expect(document.getElementById("repository-readme-status").textContent).toBe(
+      "The README preview is unavailable. View it on GitHub instead."
+    );
+    expect(document.getElementById("repository-readme-content").hidden).toBe(
+      true
+    );
+  });
+
+  test("shows the fallback when a JSON wrapper omits content", async () => {
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: jest.fn().mockReturnValue("application/json") },
+      text: jest.fn().mockResolvedValue(JSON.stringify({ name: "README.md" })),
+    });
+
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+
+    expect(document.getElementById("repository-readme-status").textContent).toBe(
+      "The README preview is unavailable. View it on GitHub instead."
+    );
+    expect(document.getElementById("repository-readme-content").hidden).toBe(
       true
     );
   });
