@@ -25,7 +25,7 @@ if (typeof require === "function") {
 // own declarations private and exposes them explicitly instead: as
 // `window.ThemeInit` in the browser, or as this require's return value in
 // Node, so this file always reads them from one clearly defined source
-// rather than relying on identifiers implicitly shared or mutated globals.
+// rather than relying on implicitly shared identifiers or mutated globals.
 const themeInit =
   typeof require === "function" ? require("./theme-init.js") : window.ThemeInit;
 if (!themeInit) {

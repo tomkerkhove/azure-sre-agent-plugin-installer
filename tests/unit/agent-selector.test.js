@@ -34,9 +34,9 @@ function createContext(overrides = {}) {
   };
   vm.createContext(context);
   // Mirrors the real page load order (see index.html/install.html):
-  // assets/theme-init.js runs first and exposes `window.ThemeInit`, which
-  // assets/app.js reads its shared theme constants and normalization logic
-  // from.
+  // assets/theme-init.js runs first and exposes `window.ThemeInit`, from
+  // which assets/app.js reads the shared theme constants and normalization
+  // logic.
   vm.runInContext(themeInitSource, context);
   vm.runInContext(appSource, context);
   return context;
