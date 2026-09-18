@@ -87,6 +87,7 @@ test.describe("accessibility", () => {
       const toast = page.locator("#toast");
       await expect(toast).toHaveAttribute("role", "status");
       await expect(toast).toHaveAttribute("aria-live", "polite");
+      await expect(toast).toHaveAttribute("aria-atomic", "true");
     });
 
     test(`offers the privacy reset as a button on ${path}`, async ({ page }) => {
@@ -129,5 +130,39 @@ test.describe("accessibility", () => {
       "aria-describedby",
       "plugin-details-error"
     );
+  });
+
+  test("reports an empty repository accessibly instead of a native bubble", async ({ page }) => {
+    await page.goto("/");
+
+    await page.locator("#generator-form button[type=submit]").click();
+
+    const repoField = page.locator("#gen-repo");
+    const error = page.locator("#generator-error");
+    await expect(error).toContainText("Please enter a valid GitHub repository");
+    await expect(repoField).toBeFocused();
+    await expect(repoField).toHaveAttribute("aria-invalid", "true");
+    await expect(repoField).toHaveAttribute("aria-describedby", "generator-error");
+
+    await page.goto("/install.html");
+    await page.locator("#plugin-details-form button[type=submit]").click();
+
+    await expect(page.locator("#plugin-details-error")).toContainText(
+      "Please enter a valid GitHub repository"
+    );
+    await expect(page.locator("#plugin-repo")).toBeFocused();
+  });
+
+  test("moves focus to the generator field that failed validation", async ({ page }) => {
+    await page.goto("/");
+
+    await page.locator("#gen-repo").fill("owner/repo");
+    await page.locator("#gen-path").fill("../../etc/passwd");
+    await page.locator("#generator-form button[type=submit]").click();
+
+    const pathField = page.locator("#gen-path");
+    await expect(pathField).toBeFocused();
+    await expect(pathField).toHaveAttribute("aria-invalid", "true");
+    await expect(pathField).toHaveAttribute("aria-describedby", "generator-error");
   });
 });

@@ -110,7 +110,9 @@ header.hero {
   z-index: 20;
   padding: 10px 16px;
   border-radius: 6px;
-  background: var(--azure-blue);
+  /* Fixed blue rather than --azure-blue: the dark theme's lighter accent only
+     reaches ~3.3:1 against white text, below the 4.5:1 requirement. */
+  background: #0067b8;
   color: #fff;
   font-size: 0.9rem;
   font-weight: 600;

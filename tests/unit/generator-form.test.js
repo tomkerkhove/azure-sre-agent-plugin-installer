@@ -53,6 +53,7 @@ describe("badge generator accessibility", () => {
       "Please enter a valid path within the repository"
     );
     expect(pathField.getAttribute("aria-invalid")).toBe("true");
+    expect(pathField.getAttribute("aria-describedby")).toBe("generator-error");
     expect(document.activeElement).toBe(pathField);
   });
 
