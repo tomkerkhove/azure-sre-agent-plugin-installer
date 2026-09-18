@@ -9,11 +9,9 @@
   />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <!--
-    Applies the `theme` query parameter before the stylesheet loads, so the
-    page never flashes from light to the requested theme. Must stay the
-    first script in <head> after the Content-Security-Policy and referrer
-    meta tags (both only apply to content that follows them), ahead of the
-    stylesheet and assets/app.js.
+    Avoids a light-to-dark flash; see assets/theme-init.js for why it must
+    load here, after the CSP/referrer meta tags but before the stylesheet
+    and assets/app.js.
   -->
   <script src="assets/theme-init.js"></script>
   <title>Install a plugin - Azure SRE Agent Plugin Installer</title>

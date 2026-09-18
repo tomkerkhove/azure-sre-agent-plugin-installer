@@ -18,14 +18,9 @@ if (typeof require === "function") {
   require("./install-page.js");
 }
 
-// The theme constants and normalization logic are shared with
-// assets/theme-init.js, which applies the `theme` query parameter to
-// `<html data-theme>` before this file loads (see index.html/install.html)
-// so the page never flashes the default light theme. That file keeps its
-// own declarations private and exposes them explicitly instead: as
-// `window.ThemeInit` in the browser, or as this require's return value in
-// Node, so this file always reads them from one clearly defined source
-// rather than relying on implicitly shared identifiers or mutated globals.
+// The theme constants and normalization logic (and why they're exposed via
+// `window.ThemeInit`/`module.exports` instead of shared bare identifiers)
+// are documented in assets/theme-init.js, which must run before this file.
 const themeInit =
   typeof require === "function" ? require("./theme-init.js") : window.ThemeInit;
 if (!themeInit) {
