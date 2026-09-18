@@ -35,6 +35,7 @@ social media widgets. The following first-party browser storage entries are used
 | Key | Storage | Purpose |
 | --- | --- | --- |
 | `sre-agent-plugin-installer.analytics-consent` | `localStorage`, or `sessionStorage` fallback | Remembers your privacy choice. |
+| `sre-agent-plugin-installer.analytics-consent-probe` | `localStorage` or `sessionStorage` | Temporarily verifies that a privacy choice can be stored. It contains no consent choice and is removed immediately when storage permits. |
 | `sre-agent-plugin-installer.session-id` | `sessionStorage` | Random per-tab identifier used to group events of a single visit. Cleared when the tab closes and when consent is withdrawn. |
 | `sre-agent-plugin-installer.readme.<owner/repo>` | `sessionStorage` | Caches a sanitized, rendered public repository README to avoid repeated GitHub requests. Cleared when the tab closes. |
 
