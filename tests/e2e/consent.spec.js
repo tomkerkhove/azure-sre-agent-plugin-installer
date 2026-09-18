@@ -99,7 +99,7 @@ test.describe("Privacy consent", () => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     await expect(page.locator("#consent-banner")).toBeVisible();
     await expect(page.locator("#consent-accept")).toBeVisible();
@@ -123,7 +123,7 @@ test.describe("Privacy consent", () => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
     await page.locator("#copy-repo-btn").click();
 
@@ -135,7 +135,7 @@ test.describe("Privacy consent", () => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
 
     await expect(page.locator("#consent-banner")).toBeHidden();
@@ -158,7 +158,7 @@ test.describe("Privacy consent", () => {
     await enableTelemetry(page, ingestionRequests);
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
     await page.locator("#copy-repo-btn").click();
 
@@ -235,7 +235,7 @@ test.describe("Privacy consent", () => {
       });
     });
 
-    await page.goto("/?repo=owner/plugin");
+    await page.goto("/install.html?repo=owner/plugin");
     await page.locator("#consent-accept").click();
     await page.locator("#sign-in-btn").click();
 
@@ -310,7 +310,7 @@ test.describe("Privacy consent", () => {
       });
     });
 
-    await page.goto("/?repo=owner/plugin");
+    await page.goto("/install.html?repo=owner/plugin");
     await page.locator("#consent-accept").click();
     await page.locator("#sign-in-btn").click();
     await page.locator("#agent-select").selectOption("0");
@@ -356,7 +356,7 @@ test.describe("Privacy consent", () => {
       });
     });
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
     await page.locator("#copy-repo-btn").click();
     await page.waitForTimeout(250);
@@ -469,7 +469,7 @@ test.describe("Privacy consent", () => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-decline").click();
 
     await expect(page.locator("#consent-banner")).toBeHidden();
@@ -487,7 +487,7 @@ test.describe("Privacy consent", () => {
     await page.goto("/");
     await page.locator("#consent-decline").click();
 
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
     await expect(page.locator("#consent-banner")).toBeHidden();
     await page.waitForTimeout(250);
     expect(ingestionRequests).toHaveLength(0);

@@ -2,7 +2,7 @@ const { test, expect } = require("@playwright/test");
 
 test.describe("Install to Azure SRE Agent site", () => {
   test("shows the empty state when no repo is specified", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/install.html");
 
     await expect(page.locator("#empty-state")).toBeVisible();
     await expect(page.locator("#install-card")).toBeHidden();
@@ -23,7 +23,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("renders the install card when a repo query parameter is provided", async ({ page }) => {
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     const installCard = page.locator("#install-card");
     await expect(installCard).toBeVisible();
@@ -37,7 +37,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("shows the fallback options when online installation is not configured", async ({ page }) => {
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     await expect(page.locator("#sign-in-btn")).toBeDisabled();
     await expect(page.locator("#online-status")).toContainText(
@@ -52,7 +52,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("generates an Azure CLI import command", async ({ page }) => {
-    await page.goto("/?repo=owner/repo&path=plugins/my-plugin");
+    await page.goto("/install.html?repo=owner/repo&path=plugins/my-plugin");
 
     await page.locator("#agent-endpoint").fill(
       "https://demo.hash.eastus.azuresre.ai"
@@ -71,7 +71,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("rejects an invalid Azure SRE Agent endpoint", async ({ page }) => {
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     const endpointInput = page.locator("#agent-endpoint");
     const submitButton = page.locator(
@@ -93,7 +93,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("shows the path in repository when the path query parameter is provided", async ({ page }) => {
-    await page.goto("/?repo=owner/repo&path=plugins/my-plugin");
+    await page.goto("/install.html?repo=owner/repo&path=plugins/my-plugin");
 
     const installCard = page.locator("#install-card");
     await expect(installCard.locator("dt", { hasText: "Path in repository" })).toBeVisible();
@@ -101,13 +101,13 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("normalizes a full GitHub URL passed as the repo parameter", async ({ page }) => {
-    await page.goto("/?repo=https://github.com/owner/repo");
+    await page.goto("/install.html?repo=https://github.com/owner/repo");
 
     await expect(page.locator("#install-card h2 span")).toHaveText("owner/repo");
   });
 
   test("shows the empty state for an invalid repo parameter", async ({ page }) => {
-    await page.goto("/?repo=not-a-valid-repo");
+    await page.goto("/install.html?repo=not-a-valid-repo");
 
     await expect(page.locator("#empty-state")).toBeVisible();
     await expect(page.locator("#install-card")).toBeHidden();
@@ -115,7 +115,7 @@ test.describe("Install to Azure SRE Agent site", () => {
 
   test("copies the repository to the clipboard", async ({ page, context }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     await page.locator("#copy-repo-btn").click();
 
@@ -134,7 +134,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     const output = page.locator("#generator-output");
     await expect(output).toBeVisible();
     await expect(output).toContainText("[![Install to Azure SRE Agent]");
-    await expect(output).toContainText("repo=owner%2Frepo");
+    await expect(output).toContainText("install.html?repo=owner%2Frepo");
     await expect(output).toContainText("path=plugins%2Fmy-plugin");
   });
 
@@ -145,19 +145,19 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("uses the dark theme when the theme query parameter is dark", async ({ page }) => {
-    await page.goto("/?repo=owner/repo&theme=dark");
+    await page.goto("/install.html?repo=owner/repo&theme=dark");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   });
 
   test("falls back to the light theme for an unsupported theme", async ({ page }) => {
-    await page.goto("/?repo=owner/repo&theme=neon");
+    await page.goto("/install.html?repo=owner/repo&theme=neon");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   });
 
   test("toggles the page theme and preserves the selection in the URL", async ({ page }) => {
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     const toggle = page.locator("#theme-toggle");
     await expect(page.locator("footer #theme-toggle")).toBeVisible();
@@ -225,7 +225,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("ignores an invalid path query parameter", async ({ page }) => {
-    await page.goto("/?repo=owner/repo&path=../../etc/passwd");
+    await page.goto("/install.html?repo=owner/repo&path=../../etc/passwd");
 
     const installCard = page.locator("#install-card");
     await expect(installCard).toBeVisible();
@@ -234,11 +234,39 @@ test.describe("Install to Azure SRE Agent site", () => {
 
   test("renders a script-like repo parameter as text instead of markup", async ({ page }) => {
     const injected = "<img src=x onerror=window.__xss=1>";
-    await page.goto(`/?repo=${encodeURIComponent(injected)}&path=${encodeURIComponent(injected)}`);
+    await page.goto(`/install.html?repo=${encodeURIComponent(injected)}&path=${encodeURIComponent(injected)}`);
 
     await expect(page.locator("#empty-state")).toBeVisible();
     await expect(page.locator("#install-card")).toBeHidden();
     expect(await page.evaluate(() => window.__xss)).toBeUndefined();
     expect(await page.locator("#install-card").innerHTML()).toBe("");
+  });
+
+  test("navigates from the landing page to the install page and back", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+
+    await page.locator(".site-nav-link", { hasText: "Install a plugin" }).click();
+    await expect(page).toHaveURL(/\/install\.html$/);
+    await expect(page.locator(".site-nav-link", { hasText: "Install a plugin" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+
+    await page.locator(".site-nav-link", { hasText: "Generate a badge" }).click();
+    await expect(page).toHaveURL(/\/(index\.html)?$/);
+    await expect(page.locator("#generator-form")).toBeVisible();
+  });
+
+  test("redirects legacy badge links from the landing page to the install page", async ({ page }) => {
+    await page.goto("/?repo=owner/repo&path=plugins/my-plugin&theme=dark");
+
+    await expect(page).toHaveURL(/\/install\.html\?repo=owner\/repo&path=plugins\/my-plugin&theme=dark$/);
+    await expect(page.locator("#install-card")).toBeVisible();
+    await expect(page.locator("#install-card h2 span")).toHaveText("owner/repo");
   });
 });
