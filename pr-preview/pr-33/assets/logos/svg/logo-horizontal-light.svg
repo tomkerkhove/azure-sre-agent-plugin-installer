@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="360" viewBox="0 0 1400 360"><defs>
+  <linearGradient id="azure" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#50E6FF"/><stop offset="100%" stop-color="#0078D4"/></linearGradient>
+  <linearGradient id="plugin" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#4F46E5"/></linearGradient>
+</defs><rect width="1400" height="360" rx="32" fill="#FFFFFF"/><g transform="translate(35 -5) scale(.70)"><g>
+  <path d="M340 170 C330 115 285 80 230 80 C185 80 145 105 125 145 C70 150 30 195 30 250 C30 310 78 360 138 360 H340 C395 360 440 315 440 260 C440 205 397 170 340 170Z" fill="url(#azure)"/>
+  <circle cx="235" cy="241" r="82" fill="#FFFFFF"/>
+  <rect x="166" y="214" width="138" height="56" rx="28" fill="#0B1F44"/>
+  <circle cx="210" cy="242" r="10" fill="#FFFFFF"/><circle cx="260" cy="242" r="10" fill="#FFFFFF"/>
+  <g transform="translate(190 310) scale(.82)"><path fill="url(#plugin)" d="M40 0h40c0 18 12 30 30 30s30-12 30-30h40v40c18 0 30 12 30 30s-12 30-30 30v40h-40c0-18-12-30-30-30s-30 12-30 30H40v-40c-18 0-30-12-30-30s12-30 30-30z"/></g>
+  <g fill="#FFFFFF"><rect x="239" y="326" width="20" height="47" rx="10"/><path d="M249 397l-31-35h20v-17h22v17h20z"/></g>
+</g></g><text x="390" y="130" font-family="Segoe UI,Arial,sans-serif" font-size="64" font-weight="700" fill="#0B1F44">Azure SRE Agent</text><text x="390" y="205" font-family="Segoe UI,Arial,sans-serif" font-size="58" font-weight="650" fill="#1689E5">Plugin Installer</text><text x="392" y="267" font-family="Segoe UI,Arial,sans-serif" font-size="30" font-weight="400" letter-spacing="1" fill="#5B6470">Install. Connect. Empower.</text></svg>
