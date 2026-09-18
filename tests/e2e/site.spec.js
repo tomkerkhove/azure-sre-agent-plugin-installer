@@ -419,11 +419,13 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("footer #theme-toggle")).toBeVisible();
     await expect(toggle).toHaveAccessibleName("Switch to dark theme");
     await expect(toggle.locator(".theme-icon-moon")).toBeVisible();
+    await expect(toggle.locator(".theme-icon-sun")).toBeHidden();
 
     await toggle.click();
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(toggle).toHaveAccessibleName("Switch to light theme");
+    await expect(toggle.locator(".theme-icon-moon")).toBeHidden();
     await expect(toggle.locator(".theme-icon-sun")).toBeVisible();
   });
 

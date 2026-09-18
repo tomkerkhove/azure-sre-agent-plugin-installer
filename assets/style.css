@@ -199,10 +199,6 @@ header.hero {
   font-size: 1rem;
 }
 
-.card h3:first-child {
-  margin-top: 0;
-}
-
 .plugin-meta dt {
   font-weight: 600;
   color: var(--muted);
