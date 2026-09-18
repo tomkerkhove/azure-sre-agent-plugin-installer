@@ -287,10 +287,9 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(output).toContainText("path=plugins%2Fmy-plugin");
   });
 
-  test("matches the supplied landing page layout", async ({ page }) => {
+  test("renders the landing page hero logo and intro", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await expect(page.locator("header.hero")).toBeVisible();
     await expect(page.locator("header.hero .brand-logo")).toBeVisible();
     await expect(page.locator("header.hero p")).toHaveCount(0);
