@@ -282,22 +282,18 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(concepts).toBeVisible();
     await expect(concepts.getByRole("heading", { level: 2 })).toHaveText("Logo concepts");
     await expect(concepts.locator("img")).toHaveCount(6);
-    await expect(concepts.locator("img").first()).toHaveAttribute(
-      "src",
-      "assets/logos/sre-beacon.svg"
-    );
-    await expect(concepts.locator("img").first()).toHaveAttribute(
-      "alt",
-      /logo concept$/
-    );
-    await expect(concepts.locator(".logo-concepts-wordmark img")).toHaveAttribute(
-      "src",
-      "assets/logos/azure-sre-agent.svg"
-    );
-    await expect(concepts.locator(".logo-concepts-wordmark img")).toHaveAttribute(
-      "alt",
-      "Azure SRE Agent wordmark logo concept"
-    );
+    const expectedConcepts = [
+      ["assets/logos/sre-beacon.svg", "SRE Beacon logo concept"],
+      ["assets/logos/plugin-puzzle.svg", "Plugin Puzzle Cloud logo concept"],
+      ["assets/logos/agent-shield.svg", "Agent Shield logo concept"],
+      ["assets/logos/command-cloud.svg", "Command Palette Cloud logo concept"],
+      ["assets/logos/sre-orbit.svg", "SRE Orbit logo concept"],
+      ["assets/logos/azure-sre-agent.svg", "Azure SRE Agent wordmark logo concept"],
+    ];
+
+    for (const [source, description] of expectedConcepts) {
+      await expect(concepts.locator(`img[src="${source}"]`)).toHaveAttribute("alt", description);
+    }
   });
 
   test("uses the light theme by default", async ({ page }) => {
