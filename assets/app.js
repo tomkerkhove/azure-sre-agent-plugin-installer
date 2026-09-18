@@ -1279,7 +1279,6 @@ function setDescribedByTokens(input, tokens) {
 }
 
 function markFieldInvalid(input, errorElement) {
-  if (!input) return;
   input.setAttribute("aria-invalid", "true");
   if (errorElement && errorElement.id) {
     const tokens = describedByTokens(input);
@@ -1319,30 +1318,47 @@ function reportFieldError({ errorElement, field, message }) {
   field.focus();
 }
 
-// A form without its alert region cannot report validation failures
-// accessibly, so it is left unwired and the broken markup is reported instead
-// of failing silently.
-function warnAboutMissingAlertRegion(formId, errorId) {
-  if (typeof console !== "undefined" && console.warn) {
-    console.warn(
-      `assets/app.js: #${formId} was not initialized because its validation alert region #${errorId} is missing.`
-    );
+// A form that is missing part of its markup (most importantly the alert region
+// it needs to report validation failures accessibly) is left unwired, and the
+// broken markup is reported instead of failing silently.
+function initFormElements(formId, elementIds) {
+  const form = document.getElementById(formId);
+  if (!form) return null;
+
+  const elements = { form };
+  const missing = [];
+  Object.keys(elementIds).forEach((key) => {
+    const element = document.getElementById(elementIds[key]);
+    if (!element) {
+      missing.push(`#${elementIds[key]}`);
+      return;
+    }
+    elements[key] = element;
+  });
+
+  if (missing.length) {
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn(
+        `assets/app.js: #${formId} was not initialized because ${missing.join(
+          ", "
+        )} ${missing.length === 1 ? "is" : "are"} missing.`
+      );
+    }
+    return null;
   }
+
+  return elements;
 }
 
 // ---------------------------------------------------------------------------
 
 function initGenerator() {
-  const form = document.getElementById("generator-form");
-  const output = document.getElementById("generator-output");
-  // The alert region carries every validation message, so the generator is only
-  // wired up when the page provides one (see index.html).
-  const errorElement = document.getElementById("generator-error");
-  if (!form || !output) return;
-  if (!errorElement) {
-    warnAboutMissingAlertRegion("generator-form", "generator-error");
-    return;
-  }
+  const elements = initFormElements("generator-form", {
+    output: "generator-output",
+    errorElement: "generator-error",
+  });
+  if (!elements) return;
+  const { form, output, errorElement } = elements;
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1413,14 +1429,11 @@ function initGenerator() {
 }
 
 function initPluginDetailsForm() {
-  const form = document.getElementById("plugin-details-form");
-  // As in initGenerator, validation messages need the alert region to exist.
-  const error = document.getElementById("plugin-details-error");
-  if (!form) return;
-  if (!error) {
-    warnAboutMissingAlertRegion("plugin-details-form", "plugin-details-error");
-    return;
-  }
+  const elements = initFormElements("plugin-details-form", {
+    error: "plugin-details-error",
+  });
+  if (!elements) return;
+  const { form, error } = elements;
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();

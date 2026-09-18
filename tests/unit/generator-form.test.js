@@ -111,4 +111,33 @@ describe("badge generator accessibility", () => {
     );
     warn.mockRestore();
   });
+
+  test("warns when the output element is missing as well", () => {
+    document.body.innerHTML = `
+      <form id="generator-form">
+        <input id="gen-repo" />
+        <input id="gen-path" />
+        <button type="submit">Generate badge markdown</button>
+      </form>
+      <p id="generator-error" role="alert" hidden></p>
+    `;
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    initGenerator();
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("#generator-output is missing")
+    );
+    warn.mockRestore();
+  });
+
+  test("stays silent when the form itself is absent", () => {
+    document.body.innerHTML = "";
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    initGenerator();
+
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
 });
