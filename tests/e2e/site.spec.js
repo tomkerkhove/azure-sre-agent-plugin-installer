@@ -1,16 +1,36 @@
 const { test, expect } = require("@playwright/test");
 
 async function expectThemeToggleState(toggle, theme) {
+  await expect(toggle.locator(".theme-toggle-label")).toHaveCount(2);
+  await expect(toggle.locator(".theme-toggle-label-dark")).toHaveText(
+    "Switch to dark theme"
+  );
+  await expect(toggle.locator(".theme-toggle-label-light")).toHaveText(
+    "Switch to light theme"
+  );
+  await expect(toggle.locator(".theme-toggle-label-dark")).toHaveAttribute(
+    "aria-hidden",
+    "true"
+  );
+  await expect(toggle.locator(".theme-toggle-label-light")).toHaveAttribute(
+    "aria-hidden",
+    "true"
+  );
+
   if (theme === "dark") {
     await expect(toggle).toHaveAccessibleName("Switch to light theme");
     await expect(toggle.locator(".theme-icon-moon")).toBeHidden();
     await expect(toggle.locator(".theme-icon-sun")).toBeVisible();
+    await expect(toggle.locator(".theme-toggle-label-dark")).toBeHidden();
+    await expect(toggle.locator(".theme-toggle-label-light")).toBeVisible();
     return;
   }
 
   await expect(toggle).toHaveAccessibleName("Switch to dark theme");
   await expect(toggle.locator(".theme-icon-moon")).toBeVisible();
   await expect(toggle.locator(".theme-icon-sun")).toBeHidden();
+  await expect(toggle.locator(".theme-toggle-label-dark")).toBeVisible();
+  await expect(toggle.locator(".theme-toggle-label-light")).toBeHidden();
 }
 
 test.describe("Install to Azure SRE Agent site", () => {
@@ -338,6 +358,24 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(sreAgentLink).toHaveAttribute("rel", "noopener noreferrer");
   });
 
+  for (const { pageName, theme, url } of [
+    { pageName: "landing page", theme: "light", url: "/?theme=light" },
+    { pageName: "landing page", theme: "dark", url: "/?theme=dark" },
+    { pageName: "install page", theme: "light", url: "/install.html?theme=light" },
+    { pageName: "install page", theme: "dark", url: "/install.html?theme=dark" },
+  ]) {
+    test(`renders visible ${theme} theme toggle labels on the ${pageName}`, async ({
+      page,
+    }) => {
+      await page.goto(url);
+
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      const toggle = page.locator("footer #theme-toggle");
+      await expect(toggle).toBeVisible();
+      await expectThemeToggleState(toggle, theme);
+    });
+  }
+
   test("uses the light theme by default", async ({ page }) => {
     await page.goto("/");
 
@@ -448,6 +486,53 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await expectThemeToggleState(toggle, "light");
     await expect(page).toHaveURL(/\/$/);
+  });
+
+  test("keeps the dark theme when using the site-nav links", async ({ page }) => {
+    await page.goto("/install.html?repo=owner/repo&theme=dark");
+
+    await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
+      "href",
+      "index.html?theme=dark"
+    );
+
+    await page.locator(".site-nav-link", { hasText: "Generate a badge" }).click();
+
+    await expect(page).toHaveURL(/\/index\.html\?theme=dark$/);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+    await expect(page.locator(".site-nav-link", { hasText: "Install a plugin" })).toHaveAttribute(
+      "href",
+      "install.html?theme=dark"
+    );
+
+    await page.locator(".site-nav-link", { hasText: "Install a plugin" }).click();
+
+    await expect(page).toHaveURL(/\/install\.html\?theme=dark$/);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+
+  test("updates the site-nav links after toggling the theme", async ({ page }) => {
+    await page.goto("/install.html?repo=owner/repo");
+
+    await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
+      "href",
+      "index.html"
+    );
+
+    await page.locator("#theme-toggle").click();
+
+    await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
+      "href",
+      "index.html?theme=dark"
+    );
+
+    await page.locator("#theme-toggle").click();
+
+    await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
+      "href",
+      "index.html"
+    );
   });
 
   test("includes the selected theme in the generated badge markdown", async ({ page }) => {

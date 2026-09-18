@@ -190,7 +190,38 @@ function applyTheme(theme) {
   return normalized;
 }
 
+function updateSiteNavLinks(theme) {
+  const links = document.querySelectorAll(".site-nav-link");
+  links.forEach((link) => {
+    const href = link.getAttribute("href");
+    if (!href) return;
+    // Resolve against the current URL only to compute the query string and
+    // fragment; the relative path itself is preserved as authored so the
+    // link keeps working from deployments served under a subpath, such as
+    // PR previews.
+    const [beforeHash] = href.split("#");
+    const [relativePath] = beforeHash.split("?");
+    // A fragment-only or query-only href (e.g. "#section") has no path to
+    // preserve; leave it untouched rather than rewriting its target.
+    if (!relativePath) return;
+    const url = new URL(href, window.location.href);
+
+    if (theme === DEFAULT_THEME) {
+      url.searchParams.delete("theme");
+    } else {
+      url.searchParams.set("theme", theme);
+    }
+
+    link.setAttribute(
+      "href",
+      `${relativePath}${url.search}${url.hash}`
+    );
+  });
+}
+
 function initThemeToggle(initialTheme) {
+  updateSiteNavLinks(initialTheme);
+
   const toggle = document.getElementById("theme-toggle");
   if (!toggle) return;
   let currentTheme = initialTheme;
@@ -214,6 +245,7 @@ function initThemeToggle(initialTheme) {
     }
 
     window.history.replaceState(null, "", url);
+    updateSiteNavLinks(currentTheme);
     updateToggle(currentTheme);
   });
 }
@@ -1526,5 +1558,6 @@ if (typeof module !== "undefined" && module.exports) {
     initGenerator,
     DEFAULT_THEME,
     SUPPORTED_THEMES,
+    updateSiteNavLinks,
   };
 }
