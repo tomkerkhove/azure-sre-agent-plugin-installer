@@ -432,6 +432,22 @@ describe("regional consent", () => {
     expect(telemetry.isEnabled()).toBe(false);
   });
 
+  test("requires consent for EU outermost-region time zones", () => {
+    for (const timeZone of [
+      "America/Cayenne",
+      "America/Guadeloupe",
+      "America/Marigot",
+      "America/Martinique",
+      "Indian/Mayotte",
+      "Indian/Reunion",
+    ]) {
+      const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+        timeZone,
+      });
+      expect(telemetry.isEnabled()).toBe(false);
+    }
+  });
+
   test("requires consent when the time zone does not identify a region", () => {
     const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
       timeZone: "UTC",
@@ -474,7 +490,16 @@ describe("regional consent", () => {
   });
 
   test("recognizes non-European legacy aliases", () => {
-    for (const timeZone of ["US/Eastern", "Canada/Pacific", "Japan"]) {
+    for (const timeZone of [
+      "US/Eastern",
+      "Canada/Pacific",
+      "Japan",
+      "CST6CDT",
+      "EST5EDT",
+      "HST",
+      "MST7MDT",
+      "PST8PDT",
+    ]) {
       const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
         timeZone,
       });
@@ -485,6 +510,13 @@ describe("regional consent", () => {
   test("requires consent when time zone detection fails", () => {
     const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
       timeZoneError: true,
+    });
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
+  test("requires consent when the time zone is missing", () => {
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      timeZone: null,
     });
     expect(telemetry.isEnabled()).toBe(false);
   });
