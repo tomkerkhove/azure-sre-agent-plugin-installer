@@ -156,6 +156,7 @@ describe("manual plugin details form", () => {
       </section>
     `;
     window.history.replaceState(null, "", "/install.html");
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
     initPluginDetailsForm();
 
     document.getElementById("plugin-repo").value = "owner/repo";
@@ -164,5 +165,9 @@ describe("manual plugin details form", () => {
       .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 
     expect(document.getElementById("install-card").hidden).toBe(true);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("#plugin-details-error is missing")
+    );
+    warn.mockRestore();
   });
 });

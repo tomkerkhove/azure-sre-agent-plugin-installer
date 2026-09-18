@@ -97,6 +97,7 @@ describe("badge generator accessibility", () => {
       <pre class="output" id="generator-output" hidden></pre>
     `;
     window.history.replaceState(null, "", "/index.html");
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
     initGenerator();
 
     document.getElementById("gen-repo").value = "owner/repo";
@@ -105,5 +106,9 @@ describe("badge generator accessibility", () => {
     const output = document.getElementById("generator-output");
     expect(output.hidden).toBe(true);
     expect(output.textContent).toBe("");
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("#generator-error is missing")
+    );
+    warn.mockRestore();
   });
 });

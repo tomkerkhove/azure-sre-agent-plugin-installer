@@ -1251,6 +1251,14 @@ function renderInstallCard(repo, path) {
   document.getElementById("empty-state").hidden = true;
 }
 
+// ---------------------------------------------------------------------------
+// Accessible form validation helpers
+//
+// Shared by the badge generator (index.html) and the plugin details form
+// (install.html). Together they announce a validation message, associate it
+// with the field that caused it and move focus there.
+// ---------------------------------------------------------------------------
+
 // Screen reader users only hear an error when it is announced and tied to the
 // field that caused it, so every validation failure sets `aria-invalid` and
 // adds the message element to the field's description. `aria-describedby` is a
@@ -1311,13 +1319,30 @@ function reportFieldError({ errorElement, field, message }) {
   field.focus();
 }
 
+// A form without its alert region cannot report validation failures
+// accessibly, so it is left unwired and the broken markup is reported instead
+// of failing silently.
+function warnAboutMissingAlertRegion(formId, errorId) {
+  if (typeof console !== "undefined" && console.warn) {
+    console.warn(
+      `assets/app.js: #${formId} was not initialized because its validation alert region #${errorId} is missing.`
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+
 function initGenerator() {
   const form = document.getElementById("generator-form");
   const output = document.getElementById("generator-output");
   // The alert region carries every validation message, so the generator is only
   // wired up when the page provides one (see index.html).
   const errorElement = document.getElementById("generator-error");
-  if (!form || !output || !errorElement) return;
+  if (!form || !output) return;
+  if (!errorElement) {
+    warnAboutMissingAlertRegion("generator-form", "generator-error");
+    return;
+  }
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1391,7 +1416,11 @@ function initPluginDetailsForm() {
   const form = document.getElementById("plugin-details-form");
   // As in initGenerator, validation messages need the alert region to exist.
   const error = document.getElementById("plugin-details-error");
-  if (!form || !error) return;
+  if (!form) return;
+  if (!error) {
+    warnAboutMissingAlertRegion("plugin-details-form", "plugin-details-error");
+    return;
+  }
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
