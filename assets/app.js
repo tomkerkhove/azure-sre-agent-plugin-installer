@@ -190,7 +190,26 @@ function applyTheme(theme) {
   return normalized;
 }
 
+function updateSiteNavLinks(theme) {
+  const links = document.querySelectorAll(".site-nav-link");
+  links.forEach((link) => {
+    const href = link.getAttribute("href");
+    if (!href) return;
+    const url = new URL(href, window.location.href);
+
+    if (theme === DEFAULT_THEME) {
+      url.searchParams.delete("theme");
+    } else {
+      url.searchParams.set("theme", theme);
+    }
+
+    link.setAttribute("href", `${url.pathname}${url.search}`);
+  });
+}
+
 function initThemeToggle(initialTheme) {
+  updateSiteNavLinks(initialTheme);
+
   const toggle = document.getElementById("theme-toggle");
   if (!toggle) return;
   let currentTheme = initialTheme;
@@ -214,6 +233,7 @@ function initThemeToggle(initialTheme) {
     }
 
     window.history.replaceState(null, "", url);
+    updateSiteNavLinks(currentTheme);
     updateToggle(currentTheme);
   });
 }
