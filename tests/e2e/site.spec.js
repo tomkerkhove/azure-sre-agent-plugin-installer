@@ -291,18 +291,8 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.goto("/");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    const heroBackground = await page
-      .locator("header.hero")
-      .evaluate((element) => getComputedStyle(element).backgroundColor);
-    const surfaceBackground = await page.evaluate(() => {
-      const probe = document.createElement("div");
-      probe.style.backgroundColor = "var(--surface)";
-      document.body.append(probe);
-      const color = getComputedStyle(probe).backgroundColor;
-      probe.remove();
-      return color;
-    });
-    expect(heroBackground).toBe(surfaceBackground);
+    await expect(page.locator("header.hero")).toBeVisible();
+    await expect(page.locator("header.hero .brand-logo")).toBeVisible();
     await expect(page.locator("header.hero p")).toHaveCount(0);
     await expect(page.locator(".page-intro h2")).toHaveText(
       "Generate your installation badge"

@@ -159,7 +159,7 @@ header.hero {
 
 @media (max-width: 480px) {
   .wrapper {
-    padding: 24px 12px 64px;
+    padding-top: 24px;
   }
 
   header.hero {
@@ -197,6 +197,10 @@ header.hero {
 .card h3 {
   margin: 24px 0 8px;
   font-size: 1rem;
+}
+
+.card h3:first-child {
+  margin-top: 0;
 }
 
 .plugin-meta dt {
