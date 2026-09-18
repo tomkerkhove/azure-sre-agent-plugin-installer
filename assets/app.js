@@ -1301,6 +1301,18 @@ function clearFieldErrors(inputs, errorElement) {
   }
 }
 
+// Both forms report validation problems the same way: show the message in an
+// alert region, associate it with the offending field and move focus there so
+// keyboard and screen reader users land on what needs correcting.
+function reportFieldError({ errorElement, field, message }) {
+  if (errorElement) {
+    errorElement.textContent = message;
+    errorElement.hidden = false;
+  }
+  markFieldInvalid(field, errorElement);
+  field.focus();
+}
+
 function initGenerator() {
   const form = document.getElementById("generator-form");
   const output = document.getElementById("generator-output");
@@ -1321,37 +1333,38 @@ function initGenerator() {
 
     clearFieldErrors([repoField, pathField], errorElement);
 
-    function reportError(message, field, reason) {
+    let failure = null;
+    if (rawPath && !pathInput) {
+      failure = {
+        field: pathField,
+        reason: "invalid-path",
+        message:
+          "Please enter a valid path within the repository, e.g. plugins/my-plugin",
+      };
+    } else if (!repo) {
+      failure = {
+        field: repoField,
+        reason: "invalid-repository",
+        message:
+          "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo",
+      };
+    }
+
+    if (failure) {
       if (errorElement) {
         // Stale markdown from an earlier submission would contradict the error.
         output.textContent = "";
         output.hidden = true;
-        errorElement.textContent = message;
-        errorElement.hidden = false;
       } else {
         output.hidden = false;
-        output.textContent = message;
+        output.textContent = failure.message;
       }
-      markFieldInvalid(field, errorElement);
-      field.focus();
-      track("BadgeGenerationFailed", { reason });
-    }
-
-    if (rawPath && !pathInput) {
-      reportError(
-        "Please enter a valid path within the repository, e.g. plugins/my-plugin",
-        pathField,
-        "invalid-path"
-      );
-      return;
-    }
-
-    if (!repo) {
-      reportError(
-        "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo",
-        repoField,
-        "invalid-repository"
-      );
+      reportFieldError({
+        errorElement,
+        field: failure.field,
+        message: failure.message,
+      });
+      track("BadgeGenerationFailed", { reason: failure.reason });
       return;
     }
 
@@ -1396,26 +1409,23 @@ function initPluginDetailsForm() {
 
     clearFieldErrors([repoField, pathField], error);
 
-    function reportError(message, field) {
-      error.textContent = message;
-      error.hidden = false;
-      markFieldInvalid(field, error);
-      field.focus();
-    }
-
     if (!repo) {
-      reportError(
-        "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo",
-        repoField
-      );
+      reportFieldError({
+        errorElement: error,
+        field: repoField,
+        message:
+          "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo",
+      });
       return;
     }
 
     if (rawPath && !path) {
-      reportError(
-        "Please enter a valid path within the repository, e.g. plugins/my-plugin",
-        pathField
-      );
+      reportFieldError({
+        errorElement: error,
+        field: pathField,
+        message:
+          "Please enter a valid path within the repository, e.g. plugins/my-plugin",
+      });
       return;
     }
 
