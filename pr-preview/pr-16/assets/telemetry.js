@@ -14,9 +14,22 @@
   "use strict";
 
   var CONSENT_STORAGE_KEY = "sre-agent-plugin-installer.analytics-consent";
-  var CONSENT_VERSION = 1;
+  var CONSENT_VERSION = 2;
   var MAX_PROPERTIES = 12;
   var MAX_PROPERTY_LENGTH = 256;
+  var SAFE_EXCEPTION_TYPES = [
+    "Error",
+    "EvalError",
+    "RangeError",
+    "ReferenceError",
+    "SyntaxError",
+    "TypeError",
+    "URIError",
+    "AggregateError",
+    "ApiError",
+  ];
+  var SAFE_EXCEPTION_OPERATIONS = ["list-agents", "install-plugin"];
+  var SAFE_EXCEPTION_SOURCES = ["window-error", "unhandled-rejection"];
 
   // Application Insights ingestion is only accepted on these Azure Monitor
   // domains. Validating this guards against a misconfigured or tampered
@@ -202,6 +215,7 @@
   function envelopeSuffix(baseType) {
     if (baseType === "PageviewData") return "Pageview";
     if (baseType === "MetricData") return "Metric";
+    if (baseType === "ExceptionData") return "Exception";
     return "Event";
   }
 
@@ -262,6 +276,57 @@
       ver: 2,
       name: String(name).slice(0, MAX_PROPERTY_LENGTH),
       properties: sanitizeProperties(properties),
+    });
+  }
+
+  function exceptionType(exception) {
+    var name =
+      exception && typeof exception === "object" && typeof exception.name === "string"
+        ? exception.name
+        : "Error";
+    return SAFE_EXCEPTION_TYPES.indexOf(name) !== -1 ? name : "Error";
+  }
+
+  function sanitizeExceptionProperties(properties) {
+    var result = {};
+    if (!properties || typeof properties !== "object") return result;
+
+    if (typeof properties.handled === "boolean") {
+      result.handled = String(properties.handled);
+    }
+    if (SAFE_EXCEPTION_OPERATIONS.indexOf(properties.operation) !== -1) {
+      result.operation = properties.operation;
+    }
+    if (SAFE_EXCEPTION_SOURCES.indexOf(properties.source) !== -1) {
+      result.source = properties.source;
+    }
+    if (
+      Number.isInteger(properties.status) &&
+      properties.status >= 100 &&
+      properties.status <= 599
+    ) {
+      result.status = String(properties.status);
+    }
+    return result;
+  }
+
+  function trackException(exception, properties) {
+    var typeName = exceptionType(exception);
+    send("ExceptionData", {
+      ver: 2,
+      exceptions: [
+        {
+          id: 1,
+          outerId: 0,
+          typeName: typeName,
+          message: "An application exception occurred.",
+          hasFullStack: false,
+          stack: "Stack trace omitted for privacy.",
+          parsedStack: [],
+        },
+      ],
+      severityLevel: 3,
+      properties: sanitizeExceptionProperties(properties),
     });
   }
 
@@ -400,8 +465,26 @@
     renderConsentUi();
   }
 
+  function initExceptionTracking() {
+    if (typeof window.addEventListener !== "function") return;
+
+    window.addEventListener("error", function (event) {
+      trackException(event && event.error, {
+        handled: false,
+        source: "window-error",
+      });
+    });
+    window.addEventListener("unhandledrejection", function (event) {
+      trackException(event && event.reason, {
+        handled: false,
+        source: "unhandled-rejection",
+      });
+    });
+  }
+
   window.siteTelemetry = {
     trackEvent: trackEvent,
+    trackException: trackException,
     trackMetric: trackMetric,
     trackPageView: requestPageView,
     isEnabled: enabled,
@@ -409,5 +492,6 @@
     setConsent: setConsent,
   };
 
+  initExceptionTracking();
   document.addEventListener("DOMContentLoaded", initConsentUi);
 })();

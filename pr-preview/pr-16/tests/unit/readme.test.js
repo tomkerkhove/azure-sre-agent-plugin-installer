@@ -1,15 +1,20 @@
 /** @jest-environment jsdom */
 
+const { TextDecoder } = require("node:util");
 const {
   sanitizeRepositoryReadmeHtml,
   loadRepositoryReadme,
+  readResponseTextWithLimit,
   README_REQUEST_TIMEOUT_MS,
+  README_MAX_LENGTH,
 } = require("../../assets/app.js");
 
 const originalFetch = global.fetch;
+global.TextDecoder = TextDecoder;
 
 afterEach(() => {
   global.fetch = originalFetch;
+  window.sessionStorage.clear();
   jest.useRealTimers();
 });
 
@@ -52,6 +57,15 @@ describe("sanitizeRepositoryReadmeHtml", () => {
     expect(window.__xss).toBeUndefined();
   });
 
+  test("removes images with empty sources", () => {
+    const wrapper = sanitize(`
+      <img alt="Missing source">
+      <img src="  " alt="Empty source">
+    `);
+
+    expect(wrapper.querySelector("img")).toBeNull();
+  });
+
   test("allows GitHub-hosted images without forwarding a referrer", () => {
     const wrapper = sanitize(`
       <img
@@ -82,12 +96,40 @@ describe("sanitizeRepositoryReadmeHtml", () => {
       "https://github.com/tomkerkhove/azure-carbon-sre/blob/HEAD/CONTRIBUTING.md"
     );
     expect(wrapper.querySelector("img").getAttribute("src")).toBe(
-      "https://raw.githubusercontent.com/tomkerkhove/azure-carbon-sre/HEAD/images/plugin.png"
+      "https://github.com/tomkerkhove/azure-carbon-sre/raw/HEAD/images/plugin.png"
     );
   });
 });
 
 describe("loadRepositoryReadme", () => {
+  test("reuses a rendered README during the browser session", async () => {
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(
+        JSON.stringify({ content: "<h1>Azure Carbon SRE</h1>" })
+      ),
+    });
+
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(
+      document.querySelector("#repository-readme-content h1").textContent
+    ).toBe("Azure Carbon SRE");
+    expect(document.getElementById("repository-readme-status").hidden).toBe(
+      true
+    );
+  });
+
   test("shows the fallback when the GitHub request times out", async () => {
     jest.useFakeTimers();
     document.body.innerHTML = `
@@ -100,6 +142,7 @@ describe("loadRepositoryReadme", () => {
           reject(new DOMException("Aborted", "AbortError"));
         });
       });
+
     });
 
     const loading = loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
@@ -112,5 +155,42 @@ describe("loadRepositoryReadme", () => {
     expect(document.getElementById("repository-readme-content").hidden).toBe(
       true
     );
+  });
+});
+
+describe("readResponseTextWithLimit", () => {
+  test("rejects a declared oversized README before reading it", async () => {
+    const response = {
+      headers: {
+        get: jest.fn().mockReturnValue(String(README_MAX_LENGTH + 1)),
+      },
+      text: jest.fn(),
+    };
+
+    await expect(
+      readResponseTextWithLimit(response, README_MAX_LENGTH)
+    ).rejects.toThrow("README is too large");
+    expect(response.text).not.toHaveBeenCalled();
+  });
+
+  test("cancels a streamed README when it exceeds the limit", async () => {
+    const reader = {
+      read: jest.fn().mockResolvedValue({
+        done: false,
+        value: new Uint8Array(README_MAX_LENGTH + 1),
+      }),
+      cancel: jest.fn().mockResolvedValue(),
+      releaseLock: jest.fn(),
+    };
+    const response = {
+      headers: { get: jest.fn().mockReturnValue(null) },
+      body: { getReader: jest.fn().mockReturnValue(reader) },
+    };
+
+    await expect(
+      readResponseTextWithLimit(response, README_MAX_LENGTH)
+    ).rejects.toThrow("README is too large");
+    expect(reader.cancel).toHaveBeenCalledTimes(1);
+    expect(reader.releaseLock).toHaveBeenCalledTimes(1);
   });
 });

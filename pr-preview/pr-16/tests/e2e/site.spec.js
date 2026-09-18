@@ -8,7 +8,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("shows the empty state when no repo is specified", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/install.html");
 
     await expect(page.locator("#empty-state")).toBeVisible();
     await expect(page.locator("#install-card")).toBeHidden();
@@ -29,7 +29,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("renders the install card when a repo query parameter is provided", async ({ page }) => {
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     const installCard = page.locator("#install-card");
     await expect(installCard).toBeVisible();
@@ -43,7 +43,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("shows the fallback options when online installation is not configured", async ({ page }) => {
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     await expect(page.locator("#sign-in-btn")).toBeDisabled();
     await expect(page.locator("#online-status")).toContainText(
@@ -57,8 +57,49 @@ test.describe("Install to Azure SRE Agent site", () => {
     ]);
   });
 
+  test("generates an Azure CLI import command", async ({ page }) => {
+    await page.goto("/install.html?repo=owner/repo&path=plugins/my-plugin");
+
+    await page.locator("#agent-endpoint").fill(
+      "https://demo.hash.eastus.azuresre.ai"
+    );
+    await page.locator("#api-import-form button[type=submit]").click();
+
+    const output = page.locator("#import-output");
+    await expect(output).toBeVisible();
+    await expect(output).toContainText(
+      "--url 'https://demo.hash.eastus.azuresre.ai/api/v2/plugins/install-direct'"
+    );
+    await expect(output).toContainText(
+      `--data '{"sourceUrl":"owner/repo","pathInRepo":"plugins/my-plugin"}'`
+    );
+    await expect(page.locator("#copy-import-btn")).toBeEnabled();
+  });
+
+  test("rejects an invalid Azure SRE Agent endpoint", async ({ page }) => {
+    await page.goto("/install.html?repo=owner/repo");
+
+    const endpointInput = page.locator("#agent-endpoint");
+    const submitButton = page.locator(
+      "#api-import-form button[type=submit]"
+    );
+    const copyButton = page.locator("#copy-import-btn");
+
+    await endpointInput.fill("https://demo.hash.eastus.azuresre.ai");
+    await submitButton.click();
+    await expect(copyButton).toBeEnabled();
+
+    await endpointInput.fill("https://demo.azuresre.ai.attacker.example");
+    await submitButton.click();
+
+    await expect(page.locator("#import-output")).toHaveText(
+      "Enter a valid Azure SRE Agent endpoint ending in .azuresre.ai."
+    );
+    await expect(copyButton).toBeDisabled();
+  });
+
   test("shows the path in repository when the path query parameter is provided", async ({ page }) => {
-    await page.goto("/?repo=owner/repo&path=plugins/my-plugin");
+    await page.goto("/install.html?repo=owner/repo&path=plugins/my-plugin");
 
     const installCard = page.locator("#install-card");
     await expect(installCard.locator("dt", { hasText: "Path in repository" })).toBeVisible();
@@ -66,26 +107,37 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("renders the repository README in the install card", async ({ page }) => {
+    let readmeRequests = 0;
+    await page.route(
+      "https://github.com/tomkerkhove/azure-carbon-sre/raw/HEAD/images/plugin.png",
+      async (route) => {
+        await route.fulfill({ status: 204 });
+      }
+    );
     await page.route(
       "https://api.github.com/repos/tomkerkhove/azure-carbon-sre/readme",
       async (route) => {
+        readmeRequests += 1;
         expect(route.request().headers().accept).toBe(
           "application/vnd.github.html+json"
         );
         await route.fulfill({
           status: 200,
-          contentType: "text/html",
-          body: `
+          contentType: "application/json",
+          body: JSON.stringify({
+            content: `
             <h1>Azure Carbon SRE</h1>
             <p>An Azure SRE Agent plugin marketplace.</p>
             <h2>Included plugin</h2>
             <table><tbody><tr><td><code>azure-carbon-sre</code></td></tr></tbody></table>
+            <img src="images/plugin.png" alt="Plugin diagram">
           `,
+          }),
         });
       }
     );
 
-    await page.goto("/?repo=tomkerkhove/azure-carbon-sre");
+    await page.goto("/install.html?repo=tomkerkhove/azure-carbon-sre");
 
     const readme = page.locator("#repository-readme-content");
     await expect(page.locator("#repository-readme-heading")).toHaveText(
@@ -94,11 +146,28 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(readme).toBeVisible();
     await expect(readme.locator("h1")).toHaveText("Azure Carbon SRE");
     await expect(readme.locator("table code")).toHaveText("azure-carbon-sre");
+    await expect(readme.locator("img")).toHaveAttribute(
+      "src",
+      "https://github.com/tomkerkhove/azure-carbon-sre/raw/HEAD/images/plugin.png"
+    );
+    await expect(readme).toHaveAttribute("role", "region");
+    await expect(readme).toHaveAttribute(
+      "aria-labelledby",
+      "repository-readme-heading"
+    );
+    await expect(readme).toHaveAttribute("tabindex", "0");
     await expect(page.locator("#repository-readme-status")).toBeHidden();
+
+    await page.reload();
+
+    await expect(page.locator("#repository-readme-content h1")).toHaveText(
+      "Azure Carbon SRE"
+    );
+    expect(readmeRequests).toBe(1);
   });
 
   test("keeps the GitHub fallback when the README cannot be loaded", async ({ page }) => {
-    await page.goto("/?repo=owner/missing-readme");
+    await page.goto("/install.html?repo=owner/missing-readme");
 
     await expect(page.locator("#repository-readme-status")).toHaveText(
       "The README preview is unavailable. View it on GitHub instead."
@@ -109,14 +178,26 @@ test.describe("Install to Azure SRE Agent site", () => {
     ).toHaveAttribute("href", "https://github.com/owner/missing-readme");
   });
 
+  test("keeps the README widget within a narrow viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto("/install.html?repo=owner/repo");
+
+    await expect(page.locator(".repository-readme-header")).toBeVisible();
+    expect(
+      await page
+        .locator(".repository-readme-header")
+        .evaluate((header) => header.scrollWidth <= header.clientWidth)
+    ).toBe(true);
+  });
+
   test("normalizes a full GitHub URL passed as the repo parameter", async ({ page }) => {
-    await page.goto("/?repo=https://github.com/owner/repo");
+    await page.goto("/install.html?repo=https://github.com/owner/repo");
 
     await expect(page.locator("#install-card h2 span")).toHaveText("owner/repo");
   });
 
   test("shows the empty state for an invalid repo parameter", async ({ page }) => {
-    await page.goto("/?repo=not-a-valid-repo");
+    await page.goto("/install.html?repo=not-a-valid-repo");
 
     await expect(page.locator("#empty-state")).toBeVisible();
     await expect(page.locator("#install-card")).toBeHidden();
@@ -124,7 +205,7 @@ test.describe("Install to Azure SRE Agent site", () => {
 
   test("copies the repository to the clipboard", async ({ page, context }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     await page.locator("#copy-repo-btn").click();
 
@@ -143,7 +224,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     const output = page.locator("#generator-output");
     await expect(output).toBeVisible();
     await expect(output).toContainText("[![Install to Azure SRE Agent]");
-    await expect(output).toContainText("repo=owner%2Frepo");
+    await expect(output).toContainText("install.html?repo=owner%2Frepo");
     await expect(output).toContainText("path=plugins%2Fmy-plugin");
   });
 
@@ -154,19 +235,19 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("uses the dark theme when the theme query parameter is dark", async ({ page }) => {
-    await page.goto("/?repo=owner/repo&theme=dark");
+    await page.goto("/install.html?repo=owner/repo&theme=dark");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   });
 
   test("falls back to the light theme for an unsupported theme", async ({ page }) => {
-    await page.goto("/?repo=owner/repo&theme=neon");
+    await page.goto("/install.html?repo=owner/repo&theme=neon");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   });
 
   test("toggles the page theme and preserves the selection in the URL", async ({ page }) => {
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     const toggle = page.locator("#theme-toggle");
     await expect(page.locator("footer #theme-toggle")).toBeVisible();
@@ -234,7 +315,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("ignores an invalid path query parameter", async ({ page }) => {
-    await page.goto("/?repo=owner/repo&path=../../etc/passwd");
+    await page.goto("/install.html?repo=owner/repo&path=../../etc/passwd");
 
     const installCard = page.locator("#install-card");
     await expect(installCard).toBeVisible();
@@ -243,11 +324,39 @@ test.describe("Install to Azure SRE Agent site", () => {
 
   test("renders a script-like repo parameter as text instead of markup", async ({ page }) => {
     const injected = "<img src=x onerror=window.__xss=1>";
-    await page.goto(`/?repo=${encodeURIComponent(injected)}&path=${encodeURIComponent(injected)}`);
+    await page.goto(`/install.html?repo=${encodeURIComponent(injected)}&path=${encodeURIComponent(injected)}`);
 
     await expect(page.locator("#empty-state")).toBeVisible();
     await expect(page.locator("#install-card")).toBeHidden();
     expect(await page.evaluate(() => window.__xss)).toBeUndefined();
     expect(await page.locator("#install-card").innerHTML()).toBe("");
+  });
+
+  test("navigates from the landing page to the install page and back", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+
+    await page.locator(".site-nav-link", { hasText: "Install a plugin" }).click();
+    await expect(page).toHaveURL(/\/install\.html$/);
+    await expect(page.locator(".site-nav-link", { hasText: "Install a plugin" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+
+    await page.locator(".site-nav-link", { hasText: "Generate a badge" }).click();
+    await expect(page).toHaveURL(/\/(index\.html)?$/);
+    await expect(page.locator("#generator-form")).toBeVisible();
+  });
+
+  test("redirects legacy badge links from the landing page to the install page", async ({ page }) => {
+    await page.goto("/?repo=owner/repo&path=plugins/my-plugin&theme=dark");
+
+    await expect(page).toHaveURL(/\/install\.html\?repo=owner\/repo&path=plugins\/my-plugin&theme=dark$/);
+    await expect(page.locator("#install-card")).toBeVisible();
+    await expect(page.locator("#install-card h2 span")).toHaveText("owner/repo");
   });
 });

@@ -4,7 +4,9 @@ const {
   buildInstallerUrl,
   buildBadgeMarkdown,
   buildRepositoryReadmeApiUrl,
+  trackException,
 } = require("../../assets/app.js");
+const { getInstallPageUrl } = require("../../assets/install-page.js");
 
 describe("normalizeRepo", () => {
   test("returns null for empty/undefined input", () => {
@@ -78,6 +80,14 @@ describe("buildInstallerUrl", () => {
     const url = buildInstallerUrl("https://example.com/", "owner/repo", "", "neon");
     expect(url).toBe("https://example.com/?repo=owner%2Frepo");
   });
+
+  test("points at the dedicated install page, as the badge generator does", () => {
+    const url = buildInstallerUrl(
+      getInstallPageUrl("https://example.com/?theme=dark"),
+      "owner/repo"
+    );
+    expect(url).toBe("https://example.com/install.html?repo=owner%2Frepo");
+  });
 });
 
 describe("normalizeTheme", () => {
@@ -107,6 +117,30 @@ describe("buildBadgeMarkdown", () => {
     const markdown = buildBadgeMarkdown("https://example.com/?repo=owner%2Frepo");
     expect(markdown).toContain("[![Install to Azure SRE Agent]");
     expect(markdown).toContain("(https://example.com/?repo=owner%2Frepo)");
+  });
+
+  describe("trackException", () => {
+    afterEach(() => {
+      delete global.window;
+    });
+
+    test("adds a numeric API status to handled exception telemetry", () => {
+      const report = jest.fn();
+      global.window = { siteTelemetry: { trackException: report } };
+      const error = Object.assign(new Error("private"), { status: 503 });
+
+      trackException(error, { handled: true, operation: "list-agents" });
+
+      expect(report).toHaveBeenCalledWith(error, {
+        handled: true,
+        operation: "list-agents",
+        status: 503,
+      });
+    });
+
+    test("does nothing when telemetry is unavailable", () => {
+      expect(() => trackException(new Error("test"))).not.toThrow();
+    });
   });
 });
 
