@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title id="title">Command Palette Cloud</title>
+  <circle cx="80" cy="80" r="68" fill="#e8f3fc"/>
+  <path fill="#0078d4" d="M45 55c0-9 7-16 16-16h38c9 0 16 7 16 16v50c0 9-7 16-16 16H61c-9 0-16-7-16-16V55Z"/>
+  <path fill="#fff" d="M55 61h50v38H55V61Zm10 8-5 5 5 5 4-4-2-1 2-1-4-4Zm12 17h16v-4H77v4Z"/>
+  <path fill="#50e6ff" d="M112 44h8v8h-8zM40 108h8v8h-8z"/>
+</svg>

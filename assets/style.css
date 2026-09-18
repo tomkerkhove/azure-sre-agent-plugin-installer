@@ -123,6 +123,59 @@ header.hero p {
   border-color: var(--border);
 }
 
+.logo-concepts {
+  margin: 0 0 24px;
+}
+
+.logo-concepts-heading {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.logo-concepts h2,
+.logo-concepts h3,
+.logo-concepts p {
+  margin: 0;
+}
+
+.logo-concepts h2 {
+  font-size: 1.15rem;
+}
+
+.logo-concepts p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.logo-concepts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.logo-concepts-grid li {
+  padding: 14px 10px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+.logo-concepts-grid img {
+  display: block;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 8px;
+}
+
+.logo-concepts-grid h3 {
+  font-size: 0.8rem;
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);

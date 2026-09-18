@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title id="title">Agent Shield</title>
+  <path fill="#e8f3fc" d="M80 12 139 35v38c0 37-24 63-59 75C45 136 21 110 21 73V35l59-23Z"/>
+  <path fill="#0078d4" d="M80 25 127 43v30c0 28-17 49-47 62-30-13-47-34-47-62V43l47-18Z"/>
+  <path fill="#fff" d="M80 49a16 16 0 0 0-16 16v5l-10 9v22h52V79l-10-9v-5a16 16 0 0 0-16-16Zm-9 31h18v6H71v-6Zm2-17a7 7 0 1 1 14 0v7H73v-7Z"/>
+  <circle cx="63" cy="90" r="3" fill="#0078d4"/>
+  <circle cx="97" cy="90" r="3" fill="#0078d4"/>
+</svg>

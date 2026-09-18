@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title id="title">SRE Beacon</title>
+  <circle cx="80" cy="80" r="68" fill="#e8f3fc"/>
+  <circle cx="80" cy="80" r="51" fill="none" stroke="#0078d4" stroke-width="8"/>
+  <path fill="#0078d4" d="M80 41c-15 0-27 12-27 27v8c-7 3-12 10-12 18 0 11 9 20 20 20h38c11 0 20-9 20-20 0-8-5-15-12-18v-8c0-15-12-27-27-27Z"/>
+  <path fill="#fff" d="M52 91h18l8-17 10 35 9-18h12v8H102l-6 12-10-35-8 17H52v-2Z"/>
+</svg>

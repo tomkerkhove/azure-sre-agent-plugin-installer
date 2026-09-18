@@ -266,6 +266,23 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(output).toContainText("path=plugins%2Fmy-plugin");
   });
 
+  test("renders five accessible SVG logo concepts", async ({ page }) => {
+    await page.goto("/");
+
+    const concepts = page.locator(".logo-concepts");
+    await expect(concepts).toBeVisible();
+    await expect(concepts.getByRole("heading", { level: 2 })).toHaveText("Logo concepts");
+    await expect(concepts.locator("img")).toHaveCount(5);
+    await expect(concepts.locator("img").first()).toHaveAttribute(
+      "src",
+      "assets/logos/sre-beacon.svg"
+    );
+    await expect(concepts.locator("img").first()).toHaveAttribute(
+      "alt",
+      /logo concept$/
+    );
+  });
+
   test("uses the light theme by default", async ({ page }) => {
     await page.goto("/");
 

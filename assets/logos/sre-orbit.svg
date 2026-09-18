@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title id="title">SRE Orbit</title>
+  <circle cx="80" cy="80" r="68" fill="#e8f3fc"/>
+  <ellipse cx="80" cy="80" rx="55" ry="27" fill="none" stroke="#50e6ff" stroke-width="6" transform="rotate(-28 80 80)"/>
+  <ellipse cx="80" cy="80" rx="55" ry="27" fill="none" stroke="#0078d4" stroke-width="6" transform="rotate(42 80 80)"/>
+  <circle cx="80" cy="80" r="28" fill="#0078d4"/>
+  <path fill="#fff" d="M61 85c0-7 6-13 13-13 2-7 8-11 15-11 9 0 16 7 16 16v2c5 1 9 6 9 11 0 7-5 12-12 12H72c-6 0-11-5-11-11 0-3 1-5 3-7h-3v1Z"/>
+  <circle cx="27" cy="76" r="8" fill="#0078d4"/>
+  <circle cx="130" cy="45" r="8" fill="#50e6ff"/>
+  <circle cx="126" cy="117" r="8" fill="#0078d4"/>
+</svg>
