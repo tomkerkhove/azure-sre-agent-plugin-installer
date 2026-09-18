@@ -137,7 +137,7 @@ test.describe("Install to Azure SRE Agent site", () => {
       }
     );
 
-    await page.goto("/?repo=tomkerkhove/azure-carbon-sre");
+    await page.goto("/install.html?repo=tomkerkhove/azure-carbon-sre");
 
     const readme = page.locator("#repository-readme-content");
     await expect(page.locator("#repository-readme-heading")).toHaveText(
@@ -167,7 +167,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   });
 
   test("keeps the GitHub fallback when the README cannot be loaded", async ({ page }) => {
-    await page.goto("/?repo=owner/missing-readme");
+    await page.goto("/install.html?repo=owner/missing-readme");
 
     await expect(page.locator("#repository-readme-status")).toHaveText(
       "The README preview is unavailable. View it on GitHub instead."
@@ -180,7 +180,7 @@ test.describe("Install to Azure SRE Agent site", () => {
 
   test("keeps the README widget within a narrow viewport", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 800 });
-    await page.goto("/?repo=owner/repo");
+    await page.goto("/install.html?repo=owner/repo");
 
     await expect(page.locator(".repository-readme-header")).toBeVisible();
     expect(
