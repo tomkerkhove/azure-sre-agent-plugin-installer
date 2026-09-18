@@ -37,6 +37,19 @@ describe("manual plugin details form", () => {
     );
   });
 
+  test("renders the install flow without an optional path", () => {
+    setUpForm();
+    document.getElementById("plugin-repo").value = "owner/repo";
+
+    document
+      .getElementById("plugin-details-form")
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(document.getElementById("empty-state").hidden).toBe(true);
+    expect(window.location.search).toBe("?repo=owner%2Frepo");
+    expect(document.querySelectorAll("#install-card dt")).toHaveLength(1);
+  });
+
   test("keeps the form visible and reports invalid details", () => {
     setUpForm();
     document.getElementById("plugin-repo").value = "owner/repo";

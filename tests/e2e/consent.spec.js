@@ -159,6 +159,25 @@ test.describe("Privacy consent", () => {
     expect(pageView.data.baseData.properties.repository).toBe("owner/repo");
   });
 
+  test("classifies the no-query install page as plugin installation", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+
+    await page.goto("/install.html");
+    await page.locator("#consent-accept").click();
+
+    await expect
+      .poll(() => envelopes(ingestionRequests).length, { timeout: 5000 })
+      .toBeGreaterThan(0);
+
+    const pageView = envelopes(ingestionRequests).find(
+      (envelope) => envelope.data.baseType === "PageviewData"
+    );
+    expect(pageView).toBeTruthy();
+    expect(pageView.data.baseData.properties.scenario).toBe("plugin-install");
+    expect(pageView.data.baseData.properties.repository).toBe("");
+  });
+
   test("reports the plugin install metric with the repository name", async ({ page, context }) => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
