@@ -378,6 +378,18 @@ describe("consent gating", () => {
     }
   });
 
+  test("requires renewed consent for an empty stored preference", () => {
+    const localStorage = createStorage();
+    localStorage.setItem("sre-agent-plugin-installer.analytics-consent", "");
+
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      timeZone: "America/New_York",
+    });
+
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
   test("does not store any cookie-like consent value when analytics are declined", () => {
     const localStorage = createStorage();
     const declined = loadTelemetry(VALID_CONNECTION_STRING, { localStorage });

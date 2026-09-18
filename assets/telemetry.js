@@ -170,7 +170,7 @@
         hadReadError = true;
         continue;
       }
-      if (!raw) continue;
+      if (raw === null) continue;
 
       consentStore = stores[i];
       var parsed;
