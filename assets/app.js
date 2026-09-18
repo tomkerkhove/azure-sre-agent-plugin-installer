@@ -1079,7 +1079,7 @@ function renderInstallCard(repo, path) {
       <div class="actions">
         <button id="sign-in-btn" type="button">Sign in and find agents</button>
         <button id="refresh-agents-btn" type="button" class="secondary" hidden>Refresh agents</button>
-        <button id="change-account-btn" type="button" class="secondary" hidden>Change account</button>
+        <button id="change-account-btn" type="button" class="secondary" hidden>Switch to a different account</button>
       </div>
       <p id="online-status" class="status" role="status" aria-live="polite" hidden></p>
       <form id="agent-install-form" hidden>
