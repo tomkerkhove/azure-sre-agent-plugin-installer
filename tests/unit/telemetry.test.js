@@ -390,6 +390,35 @@ describe("consent gating", () => {
     expect(telemetry.isEnabled()).toBe(false);
   });
 
+  test("honors a newer session reset when stale local consent cannot be removed", () => {
+    const localStorage = createStorage();
+    const sessionStorage = createStorage();
+    localStorage.setItem(
+      "sre-agent-plugin-installer.analytics-consent",
+      JSON.stringify({
+        version: 2,
+        granted: true,
+        decidedAt: "2026-01-01T00:00:00.000Z",
+      })
+    );
+    sessionStorage.setItem(
+      "sre-agent-plugin-installer.analytics-consent",
+      JSON.stringify({
+        version: 2,
+        reset: true,
+        decidedAt: "2026-01-02T00:00:00.000Z",
+      })
+    );
+
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      sessionStorage,
+      timeZone: "America/New_York",
+    });
+
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
   test("does not store any cookie-like consent value when analytics are declined", () => {
     const localStorage = createStorage();
     const declined = loadTelemetry(VALID_CONNECTION_STRING, { localStorage });
