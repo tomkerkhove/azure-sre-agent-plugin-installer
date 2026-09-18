@@ -358,13 +358,13 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(sreAgentLink).toHaveAttribute("rel", "noopener noreferrer");
   });
 
-  for (const { name, path } of [
-    { name: "landing page", path: "/?theme=light" },
-    { name: "install page", path: "/install.html?theme=light" },
+  for (const { name, url } of [
+    { name: "landing page", url: "/?theme=light" },
+    { name: "install page", url: "/install.html?theme=light" },
   ]) {
     test(`renders visible theme toggle labels on the ${name}`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: "light" });
-      await page.goto(path);
+      await page.goto(url);
 
       const toggle = page.locator("footer #theme-toggle");
       await expect(toggle).toBeVisible();
