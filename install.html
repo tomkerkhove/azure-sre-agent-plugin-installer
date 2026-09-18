@@ -39,17 +39,28 @@
 
     <section class="card" id="install-card" hidden></section>
 
-    <section class="card empty-state" id="empty-state">
-      <h2>No plugin specified</h2>
+    <section class="card" id="empty-state">
+      <h2>Enter plugin details</h2>
       <p>
-        Link to this page with a <code>repo</code> query parameter to guide visitors through
-        installing your plugin, for example:
+        Enter the GitHub repository for the plugin you want to install.
       </p>
-      <pre class="output">https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/install.html?repo=owner/repo</pre>
-      <p class="hint">
-        Don't have a link yet? Use the
-        <a href="index.html">badge generator</a> to build one for your own plugin.
-      </p>
+      <form id="plugin-details-form">
+        <div class="field">
+          <label for="plugin-repo">GitHub repository</label>
+          <input
+            id="plugin-repo"
+            type="text"
+            placeholder="owner/repo or https://github.com/owner/repo"
+            required
+          />
+        </div>
+        <div class="field">
+          <label for="plugin-path">Path in repository (optional)</label>
+          <input id="plugin-path" type="text" placeholder="plugins/my-plugin" />
+        </div>
+        <button type="submit">Continue</button>
+      </form>
+      <p class="status" id="plugin-details-error" role="alert" hidden></p>
     </section>
 
     <footer>

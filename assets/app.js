@@ -974,6 +974,46 @@ function initGenerator() {
   });
 }
 
+function initPluginDetailsForm() {
+  const form = document.getElementById("plugin-details-form");
+  if (!form) return;
+
+  const error = document.getElementById("plugin-details-error");
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const repo = normalizeRepo(document.getElementById("plugin-repo").value);
+    const rawPath = document.getElementById("plugin-path").value.trim();
+    const path = normalizePath(rawPath);
+
+    if (!repo) {
+      error.textContent =
+        "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo";
+      error.hidden = false;
+      return;
+    }
+
+    if (rawPath && !path) {
+      error.textContent =
+        "Please enter a valid path within the repository, e.g. plugins/my-plugin";
+      error.hidden = false;
+      return;
+    }
+
+    const theme = normalizeTheme(
+      new URLSearchParams(window.location.search).get("theme")
+    );
+    const url = buildInstallerUrl(
+      getInstallPageUrl(window.location.href),
+      repo,
+      path,
+      theme
+    );
+    window.history.replaceState(null, "", url);
+    renderInstallCard(repo, path);
+  });
+}
+
 function init() {
   const params = new URLSearchParams(window.location.search);
   const repo = normalizeRepo(params.get("repo"));
@@ -987,6 +1027,7 @@ function init() {
   }
 
   initGenerator();
+  initPluginDetailsForm();
 
   if (window.siteTelemetry) {
     window.siteTelemetry.trackPageView({
@@ -1013,6 +1054,7 @@ if (typeof module !== "undefined" && module.exports) {
     buildBadgeMarkdown,
     trackException,
     copyToClipboard,
+    initPluginDetailsForm,
     DEFAULT_THEME,
     SUPPORTED_THEMES,
   };
