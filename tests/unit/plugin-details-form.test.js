@@ -18,6 +18,16 @@ function setUpForm() {
 }
 
 describe("manual plugin details form", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: false });
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
   test("renders the install flow for valid plugin details", () => {
     setUpForm();
     document.getElementById("plugin-repo").value =

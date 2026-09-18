@@ -41,6 +41,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("#plugin-details-error")).toContainText(
       "Please enter a valid GitHub repository"
     );
+    await expect(page.locator("#plugin-details-error")).toHaveClass(/error/);
     await expect(page.locator("#install-card")).toBeHidden();
 
     await page.locator("#plugin-repo").fill("owner/repo");
