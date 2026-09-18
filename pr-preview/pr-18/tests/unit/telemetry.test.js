@@ -378,6 +378,47 @@ describe("consent gating", () => {
     }
   });
 
+  test("requires renewed consent for an empty stored preference", () => {
+    const localStorage = createStorage();
+    localStorage.setItem("sre-agent-plugin-installer.analytics-consent", "");
+
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      timeZone: "America/New_York",
+    });
+
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
+  test("honors a newer session reset when stale local consent cannot be removed", () => {
+    const localStorage = createStorage();
+    const sessionStorage = createStorage();
+    localStorage.setItem(
+      "sre-agent-plugin-installer.analytics-consent",
+      JSON.stringify({
+        version: 2,
+        granted: true,
+        decidedAt: "2026-01-01T00:00:00.000Z",
+      })
+    );
+    sessionStorage.setItem(
+      "sre-agent-plugin-installer.analytics-consent",
+      JSON.stringify({
+        version: 2,
+        reset: true,
+        decidedAt: "2026-01-02T00:00:00.000Z",
+      })
+    );
+
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      sessionStorage,
+      timeZone: "America/New_York",
+    });
+
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
   test("does not store any cookie-like consent value when analytics are declined", () => {
     const localStorage = createStorage();
     const declined = loadTelemetry(VALID_CONNECTION_STRING, { localStorage });
@@ -703,6 +744,34 @@ describe("regional consent", () => {
     const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
       localStorage,
       sessionStorage: null,
+      timeZone: "America/New_York",
+    });
+
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
+  test("honors consent written by another tab during automatic initialization", () => {
+    const backingStorage = createStorage();
+    const localStorage = {
+      getItem: backingStorage.getItem,
+      removeItem: backingStorage.removeItem,
+      setItem: (key, value) => {
+        if (key === "sre-agent-plugin-installer.analytics-consent-probe") {
+          backingStorage.setItem(
+            "sre-agent-plugin-installer.analytics-consent",
+            JSON.stringify({
+              version: 2,
+              granted: false,
+              decidedAt: "2026-01-01T00:00:00.000Z",
+            })
+          );
+        }
+        backingStorage.setItem(key, value);
+      },
+    };
+
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
       timeZone: "America/New_York",
     });
 

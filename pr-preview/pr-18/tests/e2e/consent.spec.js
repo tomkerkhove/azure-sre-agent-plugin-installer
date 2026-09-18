@@ -614,14 +614,17 @@ test.describe("Privacy consent", () => {
     );
     expect(
       await page.evaluate(() => ({
-        local: localStorage.getItem(
-          "sre-agent-plugin-installer.analytics-consent"
+        local: JSON.parse(
+          localStorage.getItem("sre-agent-plugin-installer.analytics-consent")
         ),
         session: sessionStorage.getItem(
           "sre-agent-plugin-installer.analytics-consent"
         ),
       }))
-    ).toEqual({ local: null, session: null });
+    ).toEqual({
+      local: expect.objectContaining({ version: 2, reset: true }),
+      session: null,
+    });
   });
 
   test("stops analytics in another open tab after consent is withdrawn", async ({
@@ -658,6 +661,10 @@ test.describe("Privacy consent", () => {
     });
 
     await otherPage.locator("#consent-change").click();
+    await otherPage.reload();
+    await expect(otherPage.locator("#consent-status")).toHaveText(
+      "Anonymous analytics: awaiting your choice."
+    );
     await otherPage.locator("#consent-decline").click();
 
     await expect(page.locator("#consent-status")).toHaveText(

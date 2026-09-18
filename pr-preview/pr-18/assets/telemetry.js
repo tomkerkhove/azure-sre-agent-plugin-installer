@@ -170,7 +170,7 @@
         hadReadError = true;
         continue;
       }
-      if (!raw) continue;
+      if (raw === null) continue;
 
       consentStore = stores[i];
       var parsed;
@@ -189,7 +189,12 @@
       if (!isFinite(decidedAt)) decidedAt = 0;
       if (!latestDecision || decidedAt > latestDecision.decidedAt) {
         latestDecision = {
-          consent: parsed.granted === true ? "granted" : "denied",
+          consent:
+            parsed.reset === true
+              ? null
+              : parsed.granted === true
+                ? "granted"
+                : "denied",
           decidedAt: decidedAt,
           store: stores[i],
         };
@@ -202,6 +207,7 @@
         latestConsentDecisionAt,
         latestDecision.decidedAt
       );
+      consentNeedsRenewal = latestDecision.consent === null;
       return latestDecision.consent;
     }
     if (hadReadError || hadInvalidRecord) {
@@ -216,14 +222,7 @@
     ).toISOString();
   }
 
-  function writeConsent(granted, decidedAt) {
-    decidedAt = decidedAt || nextConsentDecisionAt();
-    latestConsentDecisionAt = Date.parse(decidedAt);
-    var value = JSON.stringify({
-      version: CONSENT_VERSION,
-      granted: granted,
-      decidedAt: decidedAt,
-    });
+  function writeStoredConsent(value) {
     var stores = consentStorageCandidates();
     for (var i = 0; i < stores.length; i++) {
       try {
@@ -244,15 +243,27 @@
     }
   }
 
-  function clearStoredConsent() {
-    var stores = consentStorageCandidates();
-    for (var i = 0; i < stores.length; i++) {
-      try {
-        stores[i].removeItem(CONSENT_STORAGE_KEY);
-      } catch (error) {
-        /* Ignore stores that are no longer available. */
-      }
-    }
+  function writeConsent(granted, decidedAt) {
+    decidedAt = decidedAt || nextConsentDecisionAt();
+    latestConsentDecisionAt = Date.parse(decidedAt);
+    writeStoredConsent(
+      JSON.stringify({
+        version: CONSENT_VERSION,
+        granted: granted,
+        decidedAt: decidedAt,
+      })
+    );
+  }
+
+  function writeConsentReset(decidedAt) {
+    latestConsentDecisionAt = Date.parse(decidedAt);
+    writeStoredConsent(
+      JSON.stringify({
+        version: CONSENT_VERSION,
+        reset: true,
+        decidedAt: decidedAt,
+      })
+    );
   }
 
   function canPersistConsent() {
@@ -433,13 +444,18 @@
   var endpoint = parseConnectionString(config.connectionString);
   var cloudRole = config.cloudRole || "sre-agent-plugin-installer";
   var consent = readConsent();
+  initConsentSync();
   if (
     consent === null &&
     !consentNeedsRenewal &&
     !requiresConsent() &&
     canPersistConsent()
   ) {
-    consent = "granted";
+    consentNeedsRenewal = false;
+    consent = readConsent();
+    if (consent === null && !consentNeedsRenewal) {
+      consent = "granted";
+    }
   }
   var operationId = "";
 
@@ -713,7 +729,7 @@
         latestConsentDecisionAt = Date.parse(decidedAt);
         consent = null;
         resetSession();
-        clearStoredConsent();
+        writeConsentReset(decidedAt);
         broadcastConsent(null, decidedAt);
         renderConsentUi();
         var acceptButton = document.getElementById("consent-accept");
@@ -755,7 +771,7 @@
         consentNeedsRenewal = false;
         latestConsentDecisionAt = decidedAt;
         if (message.consent === null) {
-          clearStoredConsent();
+          writeConsentReset(message.decidedAt);
         } else {
           writeConsent(message.consent === "granted", message.decidedAt);
         }
@@ -793,7 +809,6 @@
     setConsent: setConsent,
   };
 
-  initConsentSync();
   initExceptionTracking();
   document.addEventListener("DOMContentLoaded", initConsentUi);
 })();
