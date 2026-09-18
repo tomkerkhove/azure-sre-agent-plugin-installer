@@ -339,7 +339,15 @@ test.describe("Install to Azure SRE Agent site", () => {
       waitUntil: "commit",
     });
 
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    // Read the attribute once immediately instead of using an
+    // auto-retrying `expect(...).toHaveAttribute(...)`, which would keep
+    // polling until assets/app.js applies the theme on `DOMContentLoaded`
+    // and could pass even if the synchronous, up-front application in
+    // assets/theme-init.js were removed or delayed.
+    const themeAtCommit = await page
+      .locator("html")
+      .getAttribute("data-theme");
+    expect(themeAtCommit).toBe("dark");
   });
 
   test("toggles the page theme and preserves the selection in the URL", async ({ page }) => {
