@@ -158,6 +158,10 @@ header.hero {
   font-size: 1.05rem;
 }
 
+.page-intro a {
+  color: var(--readme-link);
+}
+
 @media (max-width: 480px) {
   .wrapper {
     padding-top: 24px;
