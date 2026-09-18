@@ -133,6 +133,7 @@
   var consentStore = null;
   var consentChannel = null;
   var consentNeedsRenewal = false;
+  var latestConsentDecisionAt = 0;
 
   function consentStorageCandidates(preferredStore) {
     var stores = [];
@@ -185,6 +186,10 @@
 
     if (latestDecision) {
       consentStore = latestDecision.store;
+      latestConsentDecisionAt = Math.max(
+        latestConsentDecisionAt,
+        latestDecision.decidedAt
+      );
       return latestDecision.consent;
     }
     if (hadReadError || hadInvalidRecord) {
@@ -193,11 +198,19 @@
     return null;
   }
 
-  function writeConsent(granted) {
+  function nextConsentDecisionAt() {
+    return new Date(
+      Math.max(Date.now(), latestConsentDecisionAt + 1)
+    ).toISOString();
+  }
+
+  function writeConsent(granted, decidedAt) {
+    decidedAt = decidedAt || nextConsentDecisionAt();
+    latestConsentDecisionAt = Date.parse(decidedAt);
     var value = JSON.stringify({
       version: CONSENT_VERSION,
       granted: granted,
-      decidedAt: new Date().toISOString(),
+      decidedAt: decidedAt,
     });
     var stores = consentStorageCandidates();
     for (var i = 0; i < stores.length; i++) {
@@ -585,12 +598,13 @@
     flushPendingPageView();
   }
 
-  function broadcastConsent(nextConsent) {
+  function broadcastConsent(nextConsent, decidedAt) {
     if (!consentChannel) return;
     try {
       consentChannel.postMessage({
         version: CONSENT_VERSION,
         consent: nextConsent,
+        decidedAt: decidedAt,
       });
     } catch (error) {
       /* The storage event remains available when broadcasting fails. */
@@ -598,10 +612,11 @@
   }
 
   function setConsent(granted) {
+    var decidedAt = nextConsentDecisionAt();
     consent = granted ? "granted" : "denied";
     consentNeedsRenewal = false;
-    writeConsent(granted);
-    broadcastConsent(consent);
+    writeConsent(granted, decidedAt);
+    broadcastConsent(consent, decidedAt);
     if (!granted) {
       resetSession();
     }
@@ -659,10 +674,12 @@
     if (change) {
       change.addEventListener("click", function (event) {
         event.preventDefault();
+        var decidedAt = nextConsentDecisionAt();
+        latestConsentDecisionAt = Date.parse(decidedAt);
         consent = null;
         resetSession();
         clearStoredConsent();
-        broadcastConsent(null);
+        broadcastConsent(null, decidedAt);
         renderConsentUi();
         var acceptButton = document.getElementById("consent-accept");
         if (acceptButton) {
@@ -698,11 +715,14 @@
         ) {
           return;
         }
+        var decidedAt = Date.parse(message.decidedAt);
+        if (!isFinite(decidedAt) || decidedAt <= latestConsentDecisionAt) return;
         consentNeedsRenewal = false;
+        latestConsentDecisionAt = decidedAt;
         if (message.consent === null) {
           clearStoredConsent();
         } else {
-          writeConsent(message.consent === "granted");
+          writeConsent(message.consent === "granted", message.decidedAt);
         }
         applySynchronizedConsent(message.consent);
       };

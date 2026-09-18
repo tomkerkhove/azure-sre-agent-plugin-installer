@@ -23,7 +23,7 @@ function createStorage() {
 
 function createBroadcastChannelClass() {
   const channels = [];
-  return class BroadcastChannel {
+  class BroadcastChannel {
     constructor(name) {
       this.name = name;
       this.onmessage = null;
@@ -41,7 +41,9 @@ function createBroadcastChannelClass() {
         }
       }
     }
-  };
+  }
+  BroadcastChannel.channels = channels;
+  return BroadcastChannel;
 }
 
 // Minimal browser-like harness: telemetry.js is an IIFE meant for the browser,
@@ -303,6 +305,15 @@ describe("consent gating", () => {
     expect(first.telemetry.isEnabled()).toBe(false);
     expect(second.telemetry.isEnabled()).toBe(false);
     expect(second.requests).toHaveLength(1);
+
+    BroadcastChannel.channels[1].onmessage({
+      data: {
+        version: 2,
+        consent: "granted",
+        decidedAt: "2026-01-01T00:00:00.000Z",
+      },
+    });
+    expect(second.telemetry.isEnabled()).toBe(false);
 
     const reloadedSecond = loadTelemetry(VALID_CONNECTION_STRING, {
       BroadcastChannel,
