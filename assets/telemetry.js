@@ -182,6 +182,10 @@
         hadInvalidRecord = true;
         continue;
       }
+      if (parsed.probe === true) {
+        hadInvalidRecord = true;
+        continue;
+      }
 
       var decidedAt =
         typeof parsed.decidedAt === "string" ? Date.parse(parsed.decidedAt) : 0;
@@ -252,6 +256,33 @@
         /* Ignore stores that are no longer available. */
       }
     }
+  }
+
+  function canPersistConsent() {
+    var value = JSON.stringify({
+      version: CONSENT_VERSION,
+      granted: false,
+      probe: true,
+    });
+    var stores = consentStorageCandidates();
+    for (var i = 0; i < stores.length; i++) {
+      try {
+        stores[i].setItem(CONSENT_STORAGE_KEY, value);
+        if (stores[i].getItem(CONSENT_STORAGE_KEY) !== value) continue;
+        stores[i].removeItem(CONSENT_STORAGE_KEY);
+        consentStore = stores[i];
+        return true;
+      } catch (error) {
+        try {
+          if (stores[i].getItem(CONSENT_STORAGE_KEY) === value) {
+            stores[i].removeItem(CONSENT_STORAGE_KEY);
+          }
+        } catch (cleanupError) {
+          /* A leftover probe is treated as invalid consent and fails closed. */
+        }
+      }
+    }
+    return false;
   }
 
   function parseConnectionString(connectionString) {
@@ -410,10 +441,10 @@
   var cloudRole = config.cloudRole || "sre-agent-plugin-installer";
   var consent = readConsent();
   if (
-    consentStore &&
     consent === null &&
     !consentNeedsRenewal &&
-    !requiresConsent()
+    !requiresConsent() &&
+    canPersistConsent()
   ) {
     consent = "granted";
   }
@@ -708,6 +739,16 @@
     window.addEventListener("storage", function (event) {
       if (!event || event.key !== CONSENT_STORAGE_KEY) return;
       if (event.storageArea && localStore && event.storageArea !== localStore) return;
+      try {
+        if (
+          (event.newValue && JSON.parse(event.newValue).probe === true) ||
+          (event.oldValue && JSON.parse(event.oldValue).probe === true)
+        ) {
+          return;
+        }
+      } catch (error) {
+        /* Invalid records are handled by readConsent and fail closed. */
+      }
 
       consentNeedsRenewal = false;
       applySynchronizedConsent(readConsent());

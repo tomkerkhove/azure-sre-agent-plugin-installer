@@ -686,6 +686,28 @@ describe("regional consent", () => {
     });
     expect(telemetry.isEnabled()).toBe(false);
   });
+
+  test("requires consent when readable storage rejects consent writes", () => {
+    const backingStorage = createStorage();
+    const localStorage = {
+      getItem: backingStorage.getItem,
+      removeItem: backingStorage.removeItem,
+      setItem: (key, value) => {
+        if (key === "sre-agent-plugin-installer.analytics-consent") {
+          throw new Error("Consent write failed");
+        }
+        backingStorage.setItem(key, value);
+      },
+    };
+
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      sessionStorage: null,
+      timeZone: "America/New_York",
+    });
+
+    expect(telemetry.isEnabled()).toBe(false);
+  });
 });
 
 describe("exception telemetry", () => {
