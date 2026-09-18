@@ -1151,8 +1151,14 @@ function renderInstallCard(repo, path) {
         <li>Paste the repository below and confirm the install.</li>
       </ol>
       <div class="copy-row">
-        <input id="repo-value" type="text" value="${repo}" readonly />
-        <button id="copy-repo-btn" type="button">Copy</button>
+        <input
+          id="repo-value"
+          type="text"
+          value="${repo}"
+          aria-label="Repository to paste in the Azure portal"
+          readonly
+        />
+        <button id="copy-repo-btn" type="button" aria-label="Copy repository">Copy</button>
       </div>
       <p class="hint">Don't have an Azure SRE Agent yet? Create one first, then come back to this page.</p>
       <div class="actions">
@@ -1245,33 +1251,77 @@ function renderInstallCard(repo, path) {
   document.getElementById("empty-state").hidden = true;
 }
 
+// Screen reader users only hear an error when it is announced and tied to the
+// field that caused it, so every validation failure sets `aria-invalid` and
+// points the field at the message element describing it.
+function markFieldInvalid(input, errorElement) {
+  if (!input) return;
+  input.setAttribute("aria-invalid", "true");
+  if (errorElement && errorElement.id) {
+    input.setAttribute("aria-describedby", errorElement.id);
+  }
+}
+
+function clearFieldErrors(inputs, errorElement) {
+  inputs.forEach((input) => {
+    if (!input) return;
+    input.removeAttribute("aria-invalid");
+    input.removeAttribute("aria-describedby");
+  });
+  if (errorElement) {
+    errorElement.textContent = "";
+    errorElement.hidden = true;
+  }
+}
+
 function initGenerator() {
   const form = document.getElementById("generator-form");
   const output = document.getElementById("generator-output");
   if (!form || !output) return;
 
+  const errorElement = document.getElementById("generator-error");
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
 
-    const repoInput = document.getElementById("gen-repo").value;
-    const rawPath = document.getElementById("gen-path").value.trim();
+    const repoField = document.getElementById("gen-repo");
+    const pathField = document.getElementById("gen-path");
+    const repoInput = repoField.value;
+    const rawPath = pathField.value.trim();
     const pathInput = normalizePath(rawPath);
     const themeInput = document.getElementById("gen-theme");
     const repo = normalizeRepo(repoInput);
 
+    clearFieldErrors([repoField, pathField], errorElement);
+
+    function reportError(message, field, reason) {
+      if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.hidden = false;
+      } else {
+        output.hidden = false;
+        output.textContent = message;
+      }
+      markFieldInvalid(field, errorElement);
+      field.focus();
+      track("BadgeGenerationFailed", { reason });
+    }
+
     if (rawPath && !pathInput) {
-      output.hidden = false;
-      output.textContent =
-        "Please enter a valid path within the repository, e.g. plugins/my-plugin";
-      track("BadgeGenerationFailed", { reason: "invalid-path" });
+      reportError(
+        "Please enter a valid path within the repository, e.g. plugins/my-plugin",
+        pathField,
+        "invalid-path"
+      );
       return;
     }
 
     if (!repo) {
-      output.hidden = false;
-      output.textContent =
-        "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo";
-      track("BadgeGenerationFailed", { reason: "invalid-repository" });
+      reportError(
+        "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo",
+        repoField,
+        "invalid-repository"
+      );
       return;
     }
 
@@ -1308,21 +1358,34 @@ function initPluginDetailsForm() {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
 
-    const repo = normalizeRepo(document.getElementById("plugin-repo").value);
-    const rawPath = document.getElementById("plugin-path").value.trim();
+    const repoField = document.getElementById("plugin-repo");
+    const pathField = document.getElementById("plugin-path");
+    const repo = normalizeRepo(repoField.value);
+    const rawPath = pathField.value.trim();
     const path = normalizePath(rawPath);
 
-    if (!repo) {
-      error.textContent =
-        "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo";
+    clearFieldErrors([repoField, pathField], error);
+
+    function reportError(message, field) {
+      error.textContent = message;
       error.hidden = false;
+      markFieldInvalid(field, error);
+      field.focus();
+    }
+
+    if (!repo) {
+      reportError(
+        "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo",
+        repoField
+      );
       return;
     }
 
     if (rawPath && !path) {
-      error.textContent =
-        "Please enter a valid path within the repository, e.g. plugins/my-plugin";
-      error.hidden = false;
+      reportError(
+        "Please enter a valid path within the repository, e.g. plugins/my-plugin",
+        pathField
+      );
       return;
     }
 
@@ -1390,6 +1453,7 @@ if (typeof module !== "undefined" && module.exports) {
     trackException,
     copyToClipboard,
     initPluginDetailsForm,
+    initGenerator,
     DEFAULT_THEME,
     SUPPORTED_THEMES,
   };

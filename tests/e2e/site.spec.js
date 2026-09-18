@@ -478,9 +478,11 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.locator("#gen-repo").fill("not-a-valid-repo");
     await page.locator("#generator-form button[type=submit]").click();
 
-    await expect(page.locator("#generator-output")).toContainText(
-      "Please enter a valid GitHub repository"
-    );
+    const error = page.locator("#generator-error");
+    await expect(error).toContainText("Please enter a valid GitHub repository");
+    await expect(error).toHaveAttribute("role", "alert");
+    await expect(page.locator("#gen-repo")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.locator("#generator-output")).toBeHidden();
   });
 
   test("shows a validation message for an invalid path in the generator", async ({ page }) => {
@@ -490,9 +492,10 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.locator("#gen-path").fill("../../etc/passwd");
     await page.locator("#generator-form button[type=submit]").click();
 
-    await expect(page.locator("#generator-output")).toContainText(
+    await expect(page.locator("#generator-error")).toContainText(
       "Please enter a valid path within the repository"
     );
+    await expect(page.locator("#gen-path")).toHaveAttribute("aria-invalid", "true");
   });
 
   test("ignores an invalid path query parameter", async ({ page }) => {
