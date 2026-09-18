@@ -30,19 +30,26 @@
 <body>
   <div class="wrapper">
     <header class="hero">
-      <div class="brand-logo" aria-hidden="true"></div>
-      <h1 class="visually-hidden">Azure SRE Agent Plugin Installer</h1>
-      <p>
-        A "Deploy to Azure" button, but for
-        <a href="https://aka.ms/sreagent" target="_blank" rel="noopener noreferrer">Azure SRE Agent</a>
-        plugins. Install a plugin into your own agent below.
-      </p>
+      <div
+        class="brand-logo"
+        role="img"
+        aria-label="Azure SRE Agent Plugin Installer"
+      ></div>
     </header>
 
     <nav class="site-nav" aria-label="Primary">
       <a class="site-nav-link" href="index.html">Generate a badge</a>
       <a class="site-nav-link" href="install.html" aria-current="page">Install a plugin</a>
     </nav>
+
+    <section class="page-intro" aria-labelledby="install-heading">
+      <h1 id="install-heading">Install a plugin into your agent</h1>
+      <p>
+        Install an
+        <a href="https://aka.ms/sreagent" target="_blank" rel="noopener noreferrer">Azure SRE Agent</a>
+        plugin into your own instance in one click.
+      </p>
+    </section>
 
     <section class="card" id="install-card" hidden></section>
 
@@ -102,8 +109,6 @@
           <circle cx="12" cy="12" r="4"></circle>
           <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
         </svg>
-        <span class="theme-toggle-label theme-toggle-label-dark">Switch to dark theme</span>
-        <span class="theme-toggle-label theme-toggle-label-light">Switch to light theme</span>
       </button>
     </footer>
   </div>

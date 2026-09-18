@@ -1,5 +1,18 @@
 const { test, expect } = require("@playwright/test");
 
+async function expectThemeToggleState(toggle, theme) {
+  if (theme === "dark") {
+    await expect(toggle).toHaveAccessibleName("Switch to light theme");
+    await expect(toggle.locator(".theme-icon-moon")).toBeHidden();
+    await expect(toggle.locator(".theme-icon-sun")).toBeVisible();
+    return;
+  }
+
+  await expect(toggle).toHaveAccessibleName("Switch to dark theme");
+  await expect(toggle.locator(".theme-icon-moon")).toBeVisible();
+  await expect(toggle.locator(".theme-icon-sun")).toBeHidden();
+}
+
 test.describe("Install to Azure SRE Agent site", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("https://api.github.com/**", async (route) => {
@@ -13,7 +26,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("#empty-state")).toBeVisible();
     await expect(page.locator("#plugin-details-form")).toBeVisible();
     await expect(page.locator("#install-card")).toBeHidden();
-    await expect(page.locator("h1")).toHaveText("Azure SRE Agent Plugin Installer");
+    await expect(page.locator("h1")).toHaveText("Install a plugin into your agent");
   });
 
   test("continues to the install flow with manually entered plugin details", async ({ page }) => {
@@ -287,13 +300,51 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(output).toContainText("path=plugins%2Fmy-plugin");
   });
 
+  test("renders the landing page hero logo and intro", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(page.locator("header.hero")).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "Azure SRE Agent Plugin Installer" })
+    ).toBeVisible();
+    await expect(page.locator("header.hero p")).toHaveCount(0);
+    await expect(page.locator(".page-intro h1")).toHaveText(
+      "Generate your installation badge"
+    );
+    await expect(page.locator(".page-intro")).toContainText(
+      "Help users discover and install your Azure SRE Agent plugin in one click."
+    );
+  });
+
+  test("shows the install page intro in the redesigned layout", async ({ page }) => {
+    await page.goto("/install.html");
+
+    await expect(
+      page.getByRole("img", { name: "Azure SRE Agent Plugin Installer" })
+    ).toBeVisible();
+    await expect(page.locator("header.hero p")).toHaveCount(0);
+    await expect(page.locator(".page-intro h1")).toHaveText(
+      "Install a plugin into your agent"
+    );
+    await expect(page.locator(".page-intro")).toContainText(
+      "Install an Azure SRE Agent plugin into your own instance in one click."
+    );
+    const sreAgentLink = page.locator(
+      '.page-intro a[href="https://aka.ms/sreagent"]'
+    );
+    await expect(sreAgentLink).toBeVisible();
+    await expect(sreAgentLink).toHaveText("Azure SRE Agent");
+    await expect(sreAgentLink).toHaveAttribute("target", "_blank");
+    await expect(sreAgentLink).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
   test("uses the light theme by default", async ({ page }) => {
     await page.goto("/");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await expect(page.locator(".brand-logo")).toBeVisible();
     await expect(page.locator("h1")).toHaveText(
-      "Azure SRE Agent Plugin Installer"
+      "Generate your installation badge"
     );
     await expect(page.locator(".brand-logo")).toHaveCSS(
       "background-image",
@@ -365,20 +416,12 @@ test.describe("Install to Azure SRE Agent site", () => {
 
     const toggle = page.locator("#theme-toggle");
     await expect(page.locator("footer #theme-toggle")).toBeVisible();
-    await expect(toggle).toHaveAccessibleName("Switch to dark theme");
-    await expect(toggle.locator(".theme-toggle-label-dark")).toBeVisible();
-    await expect(toggle.locator(".theme-toggle-label-light")).toBeHidden();
-    await expect(toggle.locator(".theme-icon-moon")).toBeVisible();
-    await expect(toggle.locator(".theme-icon-sun")).toBeHidden();
+    await expectThemeToggleState(toggle, "light");
 
     await toggle.click();
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(toggle).toHaveAccessibleName("Switch to light theme");
-    await expect(toggle.locator(".theme-toggle-label-dark")).toBeHidden();
-    await expect(toggle.locator(".theme-toggle-label-light")).toBeVisible();
-    await expect(toggle.locator(".theme-icon-moon")).toBeHidden();
-    await expect(toggle.locator(".theme-icon-sun")).toBeVisible();
+    await expectThemeToggleState(toggle, "dark");
     await expect(page).toHaveURL(/repo=owner%2Frepo&theme=dark$/);
 
     await toggle.click();
@@ -387,21 +430,24 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page).toHaveURL(/\?repo=owner%2Frepo$/);
   });
 
-  test("shows the visible theme toggle label on the landing page", async ({ page }) => {
+  test("toggles the theme and updates the URL on the landing page", async ({ page }) => {
     await page.goto("/");
 
     const toggle = page.locator("#theme-toggle");
     await expect(page.locator("footer #theme-toggle")).toBeVisible();
-    await expect(toggle).toHaveAccessibleName("Switch to dark theme");
-    await expect(toggle.locator(".theme-toggle-label-dark")).toBeVisible();
-    await expect(toggle.locator(".theme-toggle-label-light")).toBeHidden();
+    await expectThemeToggleState(toggle, "light");
 
     await toggle.click();
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(toggle).toHaveAccessibleName("Switch to light theme");
-    await expect(toggle.locator(".theme-toggle-label-dark")).toBeHidden();
-    await expect(toggle.locator(".theme-toggle-label-light")).toBeVisible();
+    await expectThemeToggleState(toggle, "dark");
+    await expect(page).toHaveURL(/\?theme=dark$/);
+
+    await toggle.click();
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expectThemeToggleState(toggle, "light");
+    await expect(page).toHaveURL(/\/$/);
   });
 
   test("includes the selected theme in the generated badge markdown", async ({ page }) => {
