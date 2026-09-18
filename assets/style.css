@@ -1,12 +1,14 @@
 :root {
   --azure-blue: #0078d4;
   --azure-dark: #106ebe;
+  --heading-ink: #07192f;
   --ink: #1b1b1f;
   --muted: #5c6470;
   --surface: #ffffff;
-  --surface-alt: #f3f6fa;
-  --border: #dfe4ec;
+  --surface-alt: #f3f7fb;
+  --border: #d8e1ec;
   --radius: 10px;
+  --masthead-width: 560px;
   --readme-link: #0067b8;
   --button-secondary-hover: #e8ecf2;
   --shadow: rgba(0, 0, 0, 0.04);
@@ -15,6 +17,7 @@
 [data-theme="dark"] {
   --azure-blue: #2899f5;
   --azure-dark: #1b7fd1;
+  --heading-ink: #f4f8ff;
   --ink: #e6edf3;
   --muted: #9aa5b1;
   --surface: #161b22;
@@ -48,11 +51,11 @@ body {
 }
 
 .theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  width: auto;
-  height: auto;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
 }
 
 .theme-icon {
@@ -78,38 +81,24 @@ body {
   display: block;
 }
 
-.theme-toggle-label-light {
-  display: none;
-}
-
-[data-theme="dark"] .theme-toggle-label-dark {
-  display: none;
-}
-
-[data-theme="dark"] .theme-toggle-label-light {
-  display: inline;
-}
-
 header.hero {
-  text-align: center;
-  margin-bottom: 28px;
+  width: min(100%, var(--masthead-width));
+  margin: 0 auto 28px;
+  padding: 20px 22px;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px var(--shadow);
 }
 
 .brand-logo {
-  width: min(100%, 560px);
+  width: min(100%, var(--masthead-width));
   aspect-ratio: 35 / 9;
-  margin: 0 auto 16px;
+  margin: 0;
   background: center / contain no-repeat url("logos/svg/logo-horizontal-light.svg");
 }
 
 [data-theme="dark"] .brand-logo {
   background-image: url("logos/svg/logo-horizontal-dark.svg");
-}
-
-header.hero p {
-  max-width: 620px;
-  margin: 0 auto;
-  color: var(--muted);
 }
 
 .visually-hidden {
@@ -128,7 +117,7 @@ header.hero p {
   display: flex;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 28px;
+  margin-bottom: 26px;
 }
 
 .site-nav-link {
@@ -151,14 +140,36 @@ header.hero p {
   border-color: var(--border);
 }
 
+.page-intro {
+  width: min(100%, var(--masthead-width));
+  margin: 0 auto 16px;
+}
+
+.page-intro h1 {
+  margin: 0 0 18px;
+  color: var(--heading-ink);
+  font-size: clamp(1.6rem, 4vw, 1.75rem);
+  line-height: 1.2;
+}
+
+.page-intro p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.page-intro a {
+  color: var(--azure-blue);
+}
+
 @media (max-width: 480px) {
   .wrapper {
     padding-top: 24px;
   }
 
-  .brand-logo {
-    width: 100%;
-    margin-bottom: 12px;
+  header.hero {
+    margin-bottom: 20px;
+    padding: 16px;
   }
 
   .site-nav {
@@ -167,6 +178,10 @@ header.hero p {
 
   .site-nav-link {
     padding: 8px 10px;
+  }
+
+  .page-intro h1 {
+    font-size: 1.45rem;
   }
 }
 
