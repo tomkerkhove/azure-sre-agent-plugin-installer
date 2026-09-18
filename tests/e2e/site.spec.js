@@ -325,6 +325,41 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   });
 
+  test("applies the dark theme before the page finishes loading, avoiding a flash of the light theme", async ({
+    page,
+  }) => {
+    // assets/theme-init.js is a blocking, synchronous <script> that loads
+    // before assets/style.css in <head> (see index.html/install.html), so
+    // the browser cannot request the stylesheet until theme-init.js has
+    // finished executing. Waiting for that stylesheet request (rather than
+    // an arbitrary timeout, or `waitUntil: "commit"` alone) gives a
+    // deterministic point at which theme-init.js is guaranteed to already
+    // have applied the theme, without waiting for assets/app.js to run on
+    // `DOMContentLoaded` - which would mask a regression where
+    // theme-init.js was removed or delayed.
+    const stylesheetRequested = new Promise((resolve) => {
+      page.route("**/assets/style.css", (route) => {
+        resolve();
+        route.abort();
+      });
+    });
+
+    await page.goto("/install.html?repo=owner/repo&theme=dark", {
+      waitUntil: "commit",
+    });
+    await stylesheetRequested;
+
+    // Read the attribute once immediately instead of using an
+    // auto-retrying `expect(...).toHaveAttribute(...)`, which would keep
+    // polling until assets/app.js applies the theme on `DOMContentLoaded`
+    // and could pass even if the synchronous, up-front application in
+    // assets/theme-init.js were removed or delayed.
+    const themeBeforeStylesheetLoads = await page
+      .locator("html")
+      .getAttribute("data-theme");
+    expect(themeBeforeStylesheetLoads).toBe("dark");
+  });
+
   test("toggles the page theme and preserves the selection in the URL", async ({ page }) => {
     await page.goto("/install.html?repo=owner/repo");
 
