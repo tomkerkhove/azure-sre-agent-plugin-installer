@@ -1305,10 +1305,8 @@ function clearFieldErrors(inputs, errorElement) {
 // alert region, associate it with the offending field and move focus there so
 // keyboard and screen reader users land on what needs correcting.
 function reportFieldError({ errorElement, field, message }) {
-  if (errorElement) {
-    errorElement.textContent = message;
-    errorElement.hidden = false;
-  }
+  errorElement.textContent = message;
+  errorElement.hidden = false;
   markFieldInvalid(field, errorElement);
   field.focus();
 }
@@ -1316,9 +1314,10 @@ function reportFieldError({ errorElement, field, message }) {
 function initGenerator() {
   const form = document.getElementById("generator-form");
   const output = document.getElementById("generator-output");
-  if (!form || !output) return;
-
+  // The alert region carries every validation message, so the generator is only
+  // wired up when the page provides one (see index.html).
   const errorElement = document.getElementById("generator-error");
+  if (!form || !output || !errorElement) return;
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1351,14 +1350,9 @@ function initGenerator() {
     }
 
     if (failure) {
-      if (errorElement) {
-        // Stale markdown from an earlier submission would contradict the error.
-        output.textContent = "";
-        output.hidden = true;
-      } else {
-        output.hidden = false;
-        output.textContent = failure.message;
-      }
+      // Stale markdown from an earlier submission would contradict the error.
+      output.textContent = "";
+      output.hidden = true;
       reportFieldError({
         errorElement,
         field: failure.field,
@@ -1395,9 +1389,10 @@ function initGenerator() {
 
 function initPluginDetailsForm() {
   const form = document.getElementById("plugin-details-form");
-  if (!form) return;
-
+  // As in initGenerator, validation messages need the alert region to exist.
   const error = document.getElementById("plugin-details-error");
+  if (!form || !error) return;
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
 

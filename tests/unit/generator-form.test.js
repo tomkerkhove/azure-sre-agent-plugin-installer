@@ -86,4 +86,24 @@ describe("badge generator accessibility", () => {
     expect(output.textContent).toBe("");
     expect(document.getElementById("generator-error").hidden).toBe(false);
   });
+
+  test("does not wire up the form when the alert region is missing", () => {
+    document.body.innerHTML = `
+      <form id="generator-form">
+        <input id="gen-repo" />
+        <input id="gen-path" />
+        <button type="submit">Generate badge markdown</button>
+      </form>
+      <pre class="output" id="generator-output" hidden></pre>
+    `;
+    window.history.replaceState(null, "", "/index.html");
+    initGenerator();
+
+    document.getElementById("gen-repo").value = "owner/repo";
+    submit();
+
+    const output = document.getElementById("generator-output");
+    expect(output.hidden).toBe(true);
+    expect(output.textContent).toBe("");
+  });
 });

@@ -144,4 +144,25 @@ describe("manual plugin details form", () => {
       "plugin-details-error"
     );
   });
+
+  test("does not wire up the form when the alert region is missing", () => {
+    document.body.innerHTML = `
+      <section id="install-card" hidden></section>
+      <section id="empty-state">
+        <form id="plugin-details-form">
+          <input id="plugin-repo" />
+          <input id="plugin-path" />
+        </form>
+      </section>
+    `;
+    window.history.replaceState(null, "", "/install.html");
+    initPluginDetailsForm();
+
+    document.getElementById("plugin-repo").value = "owner/repo";
+    document
+      .getElementById("plugin-details-form")
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(document.getElementById("install-card").hidden).toBe(true);
+  });
 });
