@@ -610,4 +610,29 @@ test.describe("Privacy consent", () => {
       }))
     ).toEqual({ local: null, session: null });
   });
+
+  test("stops analytics in another open tab after consent is withdrawn", async ({
+    page,
+    context,
+  }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await page.goto("/");
+    await page.locator("#consent-accept").click();
+
+    const otherPage = await context.newPage();
+    await enableTelemetry(otherPage, ingestionRequests);
+    await otherPage.goto("/");
+    await expect(otherPage.locator("#consent-status")).toHaveText(
+      "Anonymous analytics: on."
+    );
+
+    await otherPage.locator("#consent-change").click();
+    await otherPage.locator("#consent-decline").click();
+
+    await expect(page.locator("#consent-status")).toHaveText(
+      "Anonymous analytics: off."
+    );
+    expect(await page.evaluate(() => window.siteTelemetry.isEnabled())).toBe(false);
+  });
 });

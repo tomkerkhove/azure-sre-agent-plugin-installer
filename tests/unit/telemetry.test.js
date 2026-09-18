@@ -198,6 +198,40 @@ describe("consent gating", () => {
     expect(requests).toHaveLength(1);
   });
 
+  test("stops sending when consent is withdrawn in another tab", () => {
+    const localStorage = createStorage();
+    localStorage.setItem(
+      "sre-agent-plugin-installer.analytics-consent",
+      JSON.stringify({
+        version: 2,
+        granted: true,
+        decidedAt: "2026-01-01T00:00:00.000Z",
+      })
+    );
+    const { telemetry, requests, listeners } = loadTelemetry(
+      VALID_CONNECTION_STRING,
+      { localStorage }
+    );
+    telemetry.trackEvent("BeforeWithdrawal");
+
+    localStorage.setItem(
+      "sre-agent-plugin-installer.analytics-consent",
+      JSON.stringify({
+        version: 2,
+        granted: false,
+        decidedAt: "2026-01-02T00:00:00.000Z",
+      })
+    );
+    listeners.storage({
+      key: "sre-agent-plugin-installer.analytics-consent",
+      storageArea: localStorage,
+    });
+    telemetry.trackEvent("AfterWithdrawal");
+
+    expect(telemetry.isEnabled()).toBe(false);
+    expect(requests).toHaveLength(1);
+  });
+
   test("clears the session identifier when consent is withdrawn", () => {
     const { telemetry, sessionStorage } = loadTelemetry(VALID_CONNECTION_STRING);
     telemetry.setConsent(true);
