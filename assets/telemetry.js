@@ -129,39 +129,66 @@
 
   var localStore = safeStorage("localStorage");
   var sessionStore = safeStorage("sessionStorage");
-  var consentStore = localStore || sessionStore;
+  var consentStore = null;
   var consentNeedsRenewal = false;
 
+  function consentStorageCandidates(preferredStore) {
+    var stores = [];
+    if (preferredStore) stores.push(preferredStore);
+    if (localStore && stores.indexOf(localStore) === -1) stores.push(localStore);
+    if (sessionStore && stores.indexOf(sessionStore) === -1) stores.push(sessionStore);
+    return stores;
+  }
+
   function readConsent() {
-    if (!consentStore) return null;
-    try {
-      var raw = consentStore.getItem(CONSENT_STORAGE_KEY);
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
+    var stores = consentStorageCandidates();
+    var hadReadError = false;
+    for (var i = 0; i < stores.length; i++) {
+      var raw;
+      try {
+        raw = stores[i].getItem(CONSENT_STORAGE_KEY);
+        if (!consentStore) consentStore = stores[i];
+      } catch (error) {
+        hadReadError = true;
+        continue;
+      }
+      if (!raw) continue;
+
+      consentStore = stores[i];
+      var parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (error) {
+        consentNeedsRenewal = true;
+        return null;
+      }
       if (!parsed || parsed.version !== CONSENT_VERSION) {
         consentNeedsRenewal = true;
         return null;
       }
       return parsed.granted === true ? "granted" : "denied";
-    } catch (error) {
-      consentNeedsRenewal = true;
-      return null;
     }
+    if (hadReadError) {
+      consentNeedsRenewal = true;
+    }
+    return null;
   }
 
   function writeConsent(granted) {
-    if (!consentStore) return;
-    try {
-      consentStore.setItem(
-        CONSENT_STORAGE_KEY,
-        JSON.stringify({
-          version: CONSENT_VERSION,
-          granted: granted,
-          decidedAt: new Date().toISOString(),
-        })
-      );
-    } catch (error) {
-      /* Consent simply is not remembered when storage is unavailable. */
+    var value = JSON.stringify({
+      version: CONSENT_VERSION,
+      granted: granted,
+      decidedAt: new Date().toISOString(),
+    });
+    var stores = consentStorageCandidates(consentStore);
+    for (var i = 0; i < stores.length; i++) {
+      try {
+        stores[i].setItem(CONSENT_STORAGE_KEY, value);
+        consentStore = stores[i];
+        return;
+      } catch (error) {
+        /* Try the next available preference store. */
+      }
     }
   }
 
@@ -286,6 +313,19 @@
     return false;
   }
 
+  function canonicalizeTimeZone(timeZone) {
+    try {
+      var canonicalTimeZone = Intl.DateTimeFormat(undefined, {
+        timeZone: timeZone,
+      }).resolvedOptions().timeZone;
+      return typeof canonicalTimeZone === "string" && canonicalTimeZone
+        ? canonicalTimeZone
+        : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
   function requiresConsent() {
     try {
       var timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -293,7 +333,11 @@
 
       // Only identifiers known to be outside Europe bypass consent. European
       // aliases, fixed offsets and malformed values all fail closed.
-      return !isKnownNonEuropeanTimeZone(timeZone);
+      var canonicalTimeZone = canonicalizeTimeZone(timeZone);
+      return (
+        canonicalTimeZone === null ||
+        !isKnownNonEuropeanTimeZone(canonicalTimeZone)
+      );
     } catch (error) {
       return true;
     }

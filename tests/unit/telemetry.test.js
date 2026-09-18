@@ -39,17 +39,22 @@ function loadTelemetry(connectionString, options = {}) {
     isFinite,
     Date,
     Intl: {
-      DateTimeFormat: () => ({
-        resolvedOptions: () => {
-          if (options.timeZoneError) {
-            throw new Error("Time zone unavailable");
-          }
-          return {
-            timeZone:
-              options.timeZone === undefined ? "Europe/Brussels" : options.timeZone,
-          };
-        },
-      }),
+      DateTimeFormat: (locales, formatterOptions) => {
+        if (formatterOptions && formatterOptions.timeZone !== undefined) {
+          return Intl.DateTimeFormat(locales, formatterOptions);
+        }
+        return {
+          resolvedOptions: () => {
+            if (options.timeZoneError) {
+              throw new Error("Time zone unavailable");
+            }
+            return {
+              timeZone:
+                options.timeZone === undefined ? "Europe/Brussels" : options.timeZone,
+            };
+          },
+        };
+      },
     },
     JSON,
     Object,
@@ -336,6 +341,13 @@ describe("regional consent", () => {
     }
   });
 
+  test("requires consent for malformed identifiers with a known regional prefix", () => {
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      timeZone: "America/not-a-real-zone",
+    });
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
   test("recognizes non-European legacy aliases", () => {
     for (const timeZone of ["US/Eastern", "Canada/Pacific", "Japan"]) {
       const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
@@ -378,6 +390,70 @@ describe("regional consent", () => {
 
     const second = loadTelemetry(VALID_CONNECTION_STRING, {
       localStorage: null,
+      sessionStorage,
+      timeZone: "America/New_York",
+    });
+
+    expect(second.telemetry.isEnabled()).toBe(false);
+  });
+
+  test("reads consent from session storage when local storage fails after probing", () => {
+    const localStorage = createStorage();
+    localStorage.getItem = () => {
+      throw new Error("Local storage read failed");
+    };
+    const sessionStorage = createStorage();
+    sessionStorage.setItem(
+      "sre-agent-plugin-installer.analytics-consent",
+      JSON.stringify({ version: 2, granted: false })
+    );
+
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      sessionStorage,
+      timeZone: "America/New_York",
+    });
+
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
+  test("requires consent when a preference read fails without a fallback choice", () => {
+    const localStorage = createStorage();
+    localStorage.getItem = () => {
+      throw new Error("Local storage read failed");
+    };
+
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      timeZone: "America/New_York",
+    });
+
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
+  test("writes consent to session storage when local storage fails after probing", () => {
+    const backingStorage = createStorage();
+    const localStorage = {
+      getItem: backingStorage.getItem,
+      removeItem: backingStorage.removeItem,
+      setItem: (key, value) => {
+        if (key === "__probe__") {
+          backingStorage.setItem(key, value);
+          return;
+        }
+        throw new Error("Local storage write failed");
+      },
+    };
+    const sessionStorage = createStorage();
+    const first = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      sessionStorage,
+      timeZone: "America/New_York",
+    });
+    first.telemetry.setConsent(false);
+
+    const second = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
       sessionStorage,
       timeZone: "America/New_York",
     });
