@@ -358,13 +358,13 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(sreAgentLink).toHaveAttribute("rel", "noopener noreferrer");
   });
 
-  for (const { name, theme, url } of [
-    { name: "landing page", theme: "light", url: "/?theme=light" },
-    { name: "landing page", theme: "dark", url: "/?theme=dark" },
-    { name: "install page", theme: "light", url: "/install.html?theme=light" },
-    { name: "install page", theme: "dark", url: "/install.html?theme=dark" },
+  for (const { pageName, theme, url } of [
+    { pageName: "landing page", theme: "light", url: "/?theme=light" },
+    { pageName: "landing page", theme: "dark", url: "/?theme=dark" },
+    { pageName: "install page", theme: "light", url: "/install.html?theme=light" },
+    { pageName: "install page", theme: "dark", url: "/install.html?theme=dark" },
   ]) {
-    test(`renders visible ${theme} theme toggle labels on the ${name}`, async ({
+    test(`renders visible ${theme} theme toggle labels on the ${pageName}`, async ({
       page,
     }) => {
       await page.goto(url);
