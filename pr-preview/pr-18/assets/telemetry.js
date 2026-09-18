@@ -649,6 +649,23 @@
     renderConsentUi();
   }
 
+  function initConsentSync() {
+    if (typeof window.addEventListener !== "function") return;
+
+    window.addEventListener("storage", function (event) {
+      if (!event || event.key !== CONSENT_STORAGE_KEY) return;
+      if (event.storageArea && localStore && event.storageArea !== localStore) return;
+
+      consentNeedsRenewal = false;
+      consent = readConsent();
+      if (consent !== "granted") {
+        resetSession();
+      }
+      renderConsentUi();
+      flushPendingPageView();
+    });
+  }
+
   function initExceptionTracking() {
     if (typeof window.addEventListener !== "function") return;
 
@@ -676,6 +693,7 @@
     setConsent: setConsent,
   };
 
+  initConsentSync();
   initExceptionTracking();
   document.addEventListener("DOMContentLoaded", initConsentUi);
 })();
