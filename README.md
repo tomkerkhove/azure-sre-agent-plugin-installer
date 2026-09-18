@@ -5,6 +5,8 @@
   <img src="assets/logos/svg/logo-horizontal-light.svg" alt="Azure SRE Agent Plugin Installer">
 </picture>
 
+The badge below is an example of the output generated for plugin repositories.
+
 [![Install to Azure SRE Agent](https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white)](https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/install.html?repo=tomkerkhove/azure-carbon-sre)
 
 A "Deploy to Azure" button, but for [Azure SRE Agent](https://aka.ms/sreagent) plugins.

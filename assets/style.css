@@ -84,25 +84,13 @@ header.hero {
 
 .brand-logo {
   width: min(100%, 560px);
+  aspect-ratio: 35 / 9;
   margin: 0 auto 16px;
+  background: center / contain no-repeat url("logos/svg/logo-horizontal-light.svg");
 }
 
-.brand-logo img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.brand-logo-dark {
-  display: none !important;
-}
-
-[data-theme="dark"] .brand-logo-light {
-  display: none !important;
-}
-
-[data-theme="dark"] .brand-logo-dark {
-  display: block !important;
+[data-theme="dark"] .brand-logo {
+  background-image: url("logos/svg/logo-horizontal-dark.svg");
 }
 
 header.hero p {

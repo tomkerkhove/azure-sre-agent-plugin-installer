@@ -279,12 +279,14 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.goto("/");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await expect(page.locator(".brand-logo-light")).toBeVisible();
-    await expect(page.locator(".brand-logo-light")).toHaveAttribute(
-      "src",
-      "assets/logos/svg/logo-horizontal-light.svg"
+    await expect(page.locator(".brand-logo")).toBeVisible();
+    await expect(page.locator(".brand-logo")).toHaveAccessibleName(
+      "Azure SRE Agent Plugin Installer"
     );
-    await expect(page.locator(".brand-logo-dark")).toBeHidden();
+    await expect(page.locator(".brand-logo")).toHaveCSS(
+      "background-image",
+      /logo-horizontal-light\.svg/
+    );
     await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
       "href",
       "assets/logos/favicon/favicon.ico"
@@ -299,11 +301,9 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.goto("/install.html?repo=owner/repo&theme=dark");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(page.locator(".brand-logo-light")).toBeHidden();
-    await expect(page.locator(".brand-logo-dark")).toBeVisible();
-    await expect(page.locator(".brand-logo-dark")).toHaveAttribute(
-      "src",
-      "assets/logos/svg/logo-horizontal-dark.svg"
+    await expect(page.locator(".brand-logo")).toHaveCSS(
+      "background-image",
+      /logo-horizontal-dark\.svg/
     );
   });
 
