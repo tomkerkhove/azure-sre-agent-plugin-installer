@@ -16,8 +16,23 @@
 // work the same way.
 if (typeof require === "function") {
   require("./install-page.js");
-  require("./theme-init.js");
 }
+
+// The theme constants and normalization logic (and why they're exposed via
+// `window.ThemeInit`/`module.exports` instead of shared bare identifiers)
+// are documented in assets/theme-init.js, which must run before this file.
+const themeInit =
+  typeof window !== "undefined" && window.ThemeInit
+    ? window.ThemeInit
+    : typeof require === "function"
+    ? require("./theme-init.js")
+    : undefined;
+if (!themeInit) {
+  throw new Error(
+    'assets/theme-init.js must load before assets/app.js: its exports were not returned by require("./theme-init.js"), and window.ThemeInit is not defined either (see index.html/install.html for the expected script order).'
+  );
+}
+const { DEFAULT_THEME, SUPPORTED_THEMES, normalizeTheme } = themeInit;
 
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
 const SRE_AGENT_API_DOCS_URL =
@@ -42,11 +57,6 @@ Resources
 
 let authClient = null;
 let signedInAccount = null;
-// DEFAULT_THEME, SUPPORTED_THEMES and normalizeTheme are declared in
-// assets/theme-init.js, which runs first (see index.html/install.html) so
-// the requested theme is applied before this file's DOMContentLoaded
-// handler runs. Classic <script> tags share one top-level scope in the
-// browser; the require() above attaches the same globals in Node.
 const README_REQUEST_TIMEOUT_MS = 8000;
 const README_CACHE_PREFIX = "sre-agent-plugin-installer.readme.";
 const README_MAX_LENGTH = 500000;
