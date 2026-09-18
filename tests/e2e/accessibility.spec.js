@@ -165,4 +165,18 @@ test.describe("accessibility", () => {
     await expect(pathField).toHaveAttribute("aria-invalid", "true");
     await expect(pathField).toHaveAttribute("aria-describedby", "generator-error");
   });
+
+  test("announces the generated badge markdown", async ({ page }) => {
+    await page.goto("/");
+
+    const output = page.locator("#generator-output");
+    await expect(output).toHaveAttribute("role", "status");
+    await expect(output).toHaveAttribute("aria-live", "polite");
+
+    await page.locator("#gen-repo").fill("owner/repo");
+    await page.locator("#generator-form button[type=submit]").click();
+
+    await expect(output).toBeVisible();
+    await expect(output).toContainText("[![Install to Azure SRE Agent]");
+  });
 });
