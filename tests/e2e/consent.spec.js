@@ -248,6 +248,8 @@ test.describe("Privacy consent", () => {
     await expect(page.locator("#online-status")).toContainText(
       "Azure returned: private discovery details"
     );
+    await expect(page.locator("#portal-install-option")).toHaveAttribute("open", "");
+    await expect(page.locator("#cli-install-option")).toHaveAttribute("open", "");
     await expect
       .poll(
         () =>
@@ -325,6 +327,8 @@ test.describe("Privacy consent", () => {
     await expect(page.locator("#online-status")).toContainText(
       "Azure returned: private installation details"
     );
+    await expect(page.locator("#portal-install-option")).toHaveAttribute("open", "");
+    await expect(page.locator("#cli-install-option")).toHaveAttribute("open", "");
     await expect
       .poll(
         () =>
