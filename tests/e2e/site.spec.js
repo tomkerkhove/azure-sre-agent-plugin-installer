@@ -304,7 +304,9 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.goto("/");
 
     await expect(page.locator("header.hero")).toBeVisible();
-    await expect(page.locator("header.hero .brand-logo")).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "Azure SRE Agent Plugin Installer" })
+    ).toBeVisible();
     await expect(page.locator("header.hero p")).toHaveCount(0);
     await expect(page.locator(".page-intro h1")).toHaveText(
       "Generate your installation badge"
@@ -317,7 +319,9 @@ test.describe("Install to Azure SRE Agent site", () => {
   test("shows the install page intro in the redesigned layout", async ({ page }) => {
     await page.goto("/install.html");
 
-    await expect(page.locator("header.hero .brand-logo")).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "Azure SRE Agent Plugin Installer" })
+    ).toBeVisible();
     await expect(page.locator("header.hero p")).toHaveCount(0);
     await expect(page.locator(".page-intro h1")).toHaveText(
       "Install a plugin into your agent"

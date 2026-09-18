@@ -91,7 +91,7 @@ header.hero {
 }
 
 .brand-logo {
-  width: 100%;
+  width: min(100%, var(--masthead-width));
   aspect-ratio: 35 / 9;
   margin: 0;
   background: center / contain no-repeat url("logos/svg/logo-horizontal-light.svg");
