@@ -44,9 +44,9 @@ body {
 }
 
 .wrapper {
-  max-width: 860px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 40px 0 80px;
+  padding: 40px 20px 80px;
 }
 
 .theme-toggle {
@@ -79,11 +79,6 @@ body {
 
 [data-theme="dark"] .theme-icon-sun {
   display: block;
-}
-
-.theme-toggle-label-dark,
-.theme-toggle-label-light {
-  display: none;
 }
 
 header.hero {
