@@ -186,6 +186,7 @@ function applyTheme(theme) {
 function initThemeToggle(initialTheme) {
   const toggle = document.getElementById("theme-toggle");
   if (!toggle) return;
+  const toggleLabel = document.getElementById("theme-toggle-label");
   let currentTheme = initialTheme;
 
   function updateToggle(theme) {
@@ -193,6 +194,9 @@ function initThemeToggle(initialTheme) {
     const label = `Switch to ${isDark ? "light" : "dark"} theme`;
     toggle.setAttribute("aria-label", label);
     toggle.setAttribute("title", label);
+    if (toggleLabel) {
+      toggleLabel.textContent = label;
+    }
   }
 
   updateToggle(currentTheme);
@@ -1079,7 +1083,7 @@ function renderInstallCard(repo, path) {
       <div class="actions">
         <button id="sign-in-btn" type="button">Sign in and find agents</button>
         <button id="refresh-agents-btn" type="button" class="secondary" hidden>Refresh agents</button>
-        <button id="change-account-btn" type="button" class="secondary" hidden>Switch to a different account</button>
+        <button id="change-account-btn" type="button" class="secondary" hidden>Change account</button>
       </div>
       <p id="online-status" class="status" role="status" aria-live="polite" hidden></p>
       <form id="agent-install-form" hidden>

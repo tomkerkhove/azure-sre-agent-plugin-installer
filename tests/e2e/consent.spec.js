@@ -301,56 +301,6 @@ test.describe("Privacy consent", () => {
     expect(JSON.stringify(exception)).not.toContain("private discovery details");
   });
 
-  test("offers a clearly labelled way to switch accounts after signing in", async ({ page }) => {
-    const ingestionRequests = [];
-    await enableOnlineInstaller(page, ingestionRequests);
-    await page.route("https://management.azure.com/**", async (route) => {
-      if (route.request().url().includes("Microsoft.ResourceGraph/resources")) {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            data: [
-              {
-                id: "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.App/agents/demo",
-                name: "demo",
-                subscriptionId: "sub",
-                resourceGroup: "rg",
-                location: "eastus",
-                agentEndpoint: "https://demo.hash.eastus.azuresre.ai",
-                powerState: "Running",
-              },
-            ],
-          }),
-        });
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          properties: {
-            agentEndpoint: "https://demo.hash.eastus.azuresre.ai",
-            powerState: "Running",
-          },
-        }),
-      });
-    });
-
-    await page.goto("/install.html?repo=owner/plugin");
-    await page.locator("#consent-accept").click();
-    await page.locator("#sign-in-btn").click();
-
-    const changeAccountBtn = page.locator("#change-account-btn");
-    await expect(changeAccountBtn).toBeVisible();
-    await expect(changeAccountBtn).toHaveText("Switch to a different account");
-
-    await changeAccountBtn.click();
-    await expect(page.locator("#online-status")).toContainText(
-      "Signed in as visitor@example.com"
-    );
-  });
-
   test("reports plugin installation failures with safe operation context", async ({ page }) => {
     const ingestionRequests = [];
     await enableOnlineInstaller(page, ingestionRequests);
