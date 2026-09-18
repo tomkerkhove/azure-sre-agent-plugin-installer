@@ -200,6 +200,9 @@ function updateSiteNavLinks(theme) {
     // working from deployments served under a subpath, such as PR previews.
     const [beforeHash] = href.split("#");
     const [relativePath] = beforeHash.split("?");
+    // A fragment-only or query-only href (e.g. "#section") has no path to
+    // preserve; leave it untouched rather than rewriting its target.
+    if (!relativePath) return;
     const url = new URL(href, window.location.href);
 
     if (theme === DEFAULT_THEME) {
