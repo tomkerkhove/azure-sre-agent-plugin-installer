@@ -15,6 +15,8 @@
   "use strict";
 
   var CONSENT_STORAGE_KEY = "sre-agent-plugin-installer.analytics-consent";
+  var CONSENT_STORAGE_PROBE_KEY =
+    "sre-agent-plugin-installer.analytics-consent-probe";
   var CONSENT_CHANNEL_NAME = "sre-agent-plugin-installer.analytics-consent-sync";
   var CONSENT_VERSION = 2;
   var MAX_PROPERTIES = 12;
@@ -182,11 +184,6 @@
         hadInvalidRecord = true;
         continue;
       }
-      if (parsed.probe === true) {
-        hadInvalidRecord = true;
-        continue;
-      }
-
       var decidedAt =
         typeof parsed.decidedAt === "string" ? Date.parse(parsed.decidedAt) : 0;
       if (!isFinite(decidedAt)) decidedAt = 0;
@@ -259,26 +256,22 @@
   }
 
   function canPersistConsent() {
-    var value = JSON.stringify({
-      version: CONSENT_VERSION,
-      granted: false,
-      probe: true,
-    });
+    var value = JSON.stringify({ version: CONSENT_VERSION, writable: true });
     var stores = consentStorageCandidates();
     for (var i = 0; i < stores.length; i++) {
       try {
-        stores[i].setItem(CONSENT_STORAGE_KEY, value);
-        if (stores[i].getItem(CONSENT_STORAGE_KEY) !== value) continue;
-        stores[i].removeItem(CONSENT_STORAGE_KEY);
+        stores[i].setItem(CONSENT_STORAGE_PROBE_KEY, value);
+        if (stores[i].getItem(CONSENT_STORAGE_PROBE_KEY) !== value) continue;
+        stores[i].removeItem(CONSENT_STORAGE_PROBE_KEY);
         consentStore = stores[i];
         return true;
       } catch (error) {
         try {
-          if (stores[i].getItem(CONSENT_STORAGE_KEY) === value) {
-            stores[i].removeItem(CONSENT_STORAGE_KEY);
+          if (stores[i].getItem(CONSENT_STORAGE_PROBE_KEY) === value) {
+            stores[i].removeItem(CONSENT_STORAGE_PROBE_KEY);
           }
         } catch (cleanupError) {
-          /* A leftover probe is treated as invalid consent and fails closed. */
+          /* A leftover probe contains no consent choice and is ignored. */
         }
       }
     }
@@ -739,16 +732,6 @@
     window.addEventListener("storage", function (event) {
       if (!event || event.key !== CONSENT_STORAGE_KEY) return;
       if (event.storageArea && localStore && event.storageArea !== localStore) return;
-      try {
-        if (
-          (event.newValue && JSON.parse(event.newValue).probe === true) ||
-          (event.oldValue && JSON.parse(event.oldValue).probe === true)
-        ) {
-          return;
-        }
-      } catch (error) {
-        /* Invalid records are handled by readConsent and fail closed. */
-      }
 
       consentNeedsRenewal = false;
       applySynchronizedConsent(readConsent());
