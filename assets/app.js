@@ -385,6 +385,41 @@ function sanitizeRepositoryReadmeHtml(markup, repo) {
   return template.innerHTML;
 }
 
+function extractJsonReadmeContent(text) {
+  const payload = JSON.parse(text);
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    Array.isArray(payload) ||
+    typeof payload.content !== "string"
+  ) {
+    throw new Error("README response is invalid");
+  }
+  return payload.content;
+}
+
+/**
+ * @param {string} text README response body.
+ * @param {string | null | undefined} contentType Response Content-Type header.
+ * @returns {string} README markup to sanitize and render.
+ * @throws {Error} When a JSON README response does not include string content.
+ */
+function parseReadmeMarkup(text, contentType) {
+  const normalizedContentType = (contentType || "").toLowerCase();
+  if (normalizedContentType.includes("text/html")) return text;
+
+  if (normalizedContentType.includes("application/json")) {
+    return extractJsonReadmeContent(text);
+  }
+
+  try {
+    return extractJsonReadmeContent(text);
+  } catch (error) {
+    if (error instanceof SyntaxError) return text;
+    throw error;
+  }
+}
+
 async function loadRepositoryReadme(repo) {
   const content = document.getElementById("repository-readme-content");
   const status = document.getElementById("repository-readme-status");
@@ -422,13 +457,13 @@ async function loadRepositoryReadme(repo) {
       response,
       README_MAX_LENGTH
     );
-    const payload = JSON.parse(responseText);
-    if (!payload || typeof payload.content !== "string") {
-      throw new Error("README response is invalid");
-    }
+    const markup = parseReadmeMarkup(
+      responseText,
+      response.headers?.get("content-type")
+    );
 
     const sanitizedMarkup = sanitizeRepositoryReadmeHtml(
-      payload.content,
+      markup,
       repo
     );
     if (!sanitizedMarkup.trim()) throw new Error("README is empty");
