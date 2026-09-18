@@ -1,0 +1,26 @@
+{
+  "name": "azure-sre-agent-plugin-installer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A one-click installer for Azure SRE Agent plugins.",
+  "scripts": {
+    "build": "mkdir -p assets/vendor && cp node_modules/@azure/msal-browser/lib/msal-browser.min.js assets/vendor/msal-browser.min.js",
+    "test": "jest",
+    "pretest:e2e": "npm run build",
+    "test:e2e": "playwright test",
+    "serve": "node scripts/serve.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tomkerkhove/azure-sre-agent-plugin-installer.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@azure/msal-browser": "4.30.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}
