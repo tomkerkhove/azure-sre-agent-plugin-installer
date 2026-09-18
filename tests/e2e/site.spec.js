@@ -280,7 +280,7 @@ test.describe("Install to Azure SRE Agent site", () => {
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await expect(page.locator(".brand-logo")).toBeVisible();
-    await expect(page.locator(".brand-logo")).toHaveAccessibleName(
+    await expect(page.locator("h1")).toHaveText(
       "Azure SRE Agent Plugin Installer"
     );
     await expect(page.locator(".brand-logo")).toHaveCSS(

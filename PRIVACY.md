@@ -56,8 +56,8 @@ exception messages, stack traces, or free-text you type into the badge generator
 
 ## Third-party content
 
-The site branding, icons and social-preview images are served from this site's
-own GitHub Pages origin. They do not make third-party requests.
+The installer pages' branding, icons and social-preview images are served from
+this site's own GitHub Pages origin. They do not make third-party requests.
 
 When a public plugin repository is selected, the browser requests its rendered
 README from the [GitHub API](https://docs.github.com/rest/repos/contents#get-a-repository-readme)
