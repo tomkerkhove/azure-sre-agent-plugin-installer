@@ -693,8 +693,8 @@ describe("regional consent", () => {
       getItem: backingStorage.getItem,
       removeItem: backingStorage.removeItem,
       setItem: (key, value) => {
-        if (key === "sre-agent-plugin-installer.analytics-consent") {
-          throw new Error("Consent write failed");
+        if (key !== "__probe__") {
+          throw new Error("Storage became read-only");
         }
         backingStorage.setItem(key, value);
       },
