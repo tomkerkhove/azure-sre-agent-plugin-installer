@@ -7,7 +7,11 @@ const CONNECTION_STRING =
 
 // The deployed site only enables analytics when the Pages workflow injects the
 // ingestion connection string, so it is stubbed here before any script runs.
-async function enableTelemetry(page, ingestionRequests, enableInstaller = false) {
+async function enableTelemetry(page, ingestionRequests, options = {}) {
+  const {
+    enableInstaller = false,
+    timeZone = "Europe/Brussels",
+  } = options;
   // Stand in for the config.js that the Pages workflow generates from the
   // repository secret.
   await page.route("**/assets/config.js", async (route) => {
@@ -38,9 +42,15 @@ async function enableTelemetry(page, ingestionRequests, enableInstaller = false)
 
   // sendBeacon would bypass Playwright's request interception, so force the
   // fetch transport for these tests.
-  await page.addInitScript(() => {
+  await page.addInitScript((browserTimeZone) => {
+    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+    Intl.DateTimeFormat.prototype.resolvedOptions = function () {
+      return Object.assign({}, resolvedOptions.call(this), {
+        timeZone: browserTimeZone,
+      });
+    };
     window.navigator.sendBeacon = undefined;
-  });
+  }, timeZone);
 
   await page.route(`${INGESTION_HOST}/**`, async (route) => {
     ingestionRequests.push(JSON.parse(route.request().postData() || "[]"));
@@ -49,7 +59,7 @@ async function enableTelemetry(page, ingestionRequests, enableInstaller = false)
 }
 
 async function enableOnlineInstaller(page, ingestionRequests) {
-  await enableTelemetry(page, ingestionRequests, true);
+  await enableTelemetry(page, ingestionRequests, { enableInstaller: true });
   await page.route("**/assets/vendor/msal-browser.min.js", async (route) => {
     await route.fulfill({
       status: 200,
@@ -123,9 +133,56 @@ test.describe("Privacy consent", () => {
     await expect(page.locator("#consent-banner")).toContainText(
       "application error categories"
     );
+    await expect(page.locator("#consent-banner")).toContainText(
+      "known to be outside Europe"
+    );
+    await expect(page.locator("#consent-banner")).toContainText(
+      "otherwise, nothing is collected unless you agree"
+    );
 
     await openPortalInstallOption(page);
     await page.locator("#copy-repo-btn").click();
+    await page.waitForTimeout(250);
+    expect(ingestionRequests).toHaveLength(0);
+  });
+
+  test("collects without prompting visitors outside Europe", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests, {
+      timeZone: "America/New_York",
+    });
+
+    await page.goto("/?repo=owner/repo");
+
+    await expect(page.locator("#consent-banner")).toBeHidden();
+    await expect(page.locator("#consent-status")).toHaveText(
+      "Anonymous analytics: on."
+    );
+    await expect
+      .poll(() => envelopes(ingestionRequests).length, { timeout: 5000 })
+      .toBeGreaterThan(0);
+    expect(
+      await page.evaluate(() =>
+        localStorage.getItem("sre-agent-plugin-installer.analytics-consent")
+      )
+    ).toBeNull();
+
+    await page.locator("#consent-change").click();
+    await expect(page.locator("#consent-banner")).toBeVisible();
+    await expect(page.locator("#consent-banner")).toContainText(
+      "known to be outside Europe"
+    );
+  });
+
+  test("asks for consent when a fixed-offset time zone obscures the region", async ({
+    page,
+  }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests, { timeZone: "+01:00" });
+
+    await page.goto("/?repo=owner/repo");
+
+    await expect(page.locator("#consent-banner")).toBeVisible();
     await page.waitForTimeout(250);
     expect(ingestionRequests).toHaveLength(0);
   });
@@ -538,6 +595,16 @@ test.describe("Privacy consent", () => {
     await page.goto("/");
     await page.locator("#consent-accept").click();
     await expect(page.locator("#consent-banner")).toBeHidden();
+    await page.evaluate(() =>
+      sessionStorage.setItem(
+        "sre-agent-plugin-installer.analytics-consent",
+        JSON.stringify({
+          version: 2,
+          granted: false,
+          decidedAt: new Date().toISOString(),
+        })
+      )
+    );
 
     await page.locator("#consent-change").click();
 
@@ -545,5 +612,64 @@ test.describe("Privacy consent", () => {
     await expect(page.locator("#consent-status")).toHaveText(
       "Anonymous analytics: awaiting your choice."
     );
+    expect(
+      await page.evaluate(() => ({
+        local: JSON.parse(
+          localStorage.getItem("sre-agent-plugin-installer.analytics-consent")
+        ),
+        session: sessionStorage.getItem(
+          "sre-agent-plugin-installer.analytics-consent"
+        ),
+      }))
+    ).toEqual({
+      local: expect.objectContaining({ version: 2, reset: true }),
+      session: null,
+    });
+  });
+
+  test("stops analytics in another open tab after consent is withdrawn", async ({
+    page,
+    context,
+  }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await page.goto("/");
+    await page.locator("#consent-accept").click();
+
+    const otherPage = await context.newPage();
+    await enableTelemetry(otherPage, ingestionRequests);
+    await otherPage.goto("/");
+    await expect(otherPage.locator("#consent-status")).toHaveText(
+      "Anonymous analytics: on."
+    );
+    await otherPage.evaluate(() => {
+      const consentKey = "sre-agent-plugin-installer.analytics-consent";
+      const setItem = Storage.prototype.setItem;
+      const removeItem = Storage.prototype.removeItem;
+      Storage.prototype.setItem = function (key, value) {
+        if (this === localStorage && key === consentKey) {
+          throw new DOMException("Local storage write failed");
+        }
+        return setItem.call(this, key, value);
+      };
+      Storage.prototype.removeItem = function (key) {
+        if (this === localStorage && key === consentKey) {
+          throw new DOMException("Local storage removal failed");
+        }
+        return removeItem.call(this, key);
+      };
+    });
+
+    await otherPage.locator("#consent-change").click();
+    await otherPage.reload();
+    await expect(otherPage.locator("#consent-status")).toHaveText(
+      "Anonymous analytics: awaiting your choice."
+    );
+    await otherPage.locator("#consent-decline").click();
+
+    await expect(page.locator("#consent-status")).toHaveText(
+      "Anonymous analytics: off."
+    );
+    expect(await page.evaluate(() => window.siteTelemetry.isEnabled())).toBe(false);
   });
 });
