@@ -81,19 +81,8 @@ body {
   display: block;
 }
 
+.theme-toggle-label-dark,
 .theme-toggle-label-light {
-  display: none;
-}
-
-.theme-toggle-label-dark {
-  display: none;
-}
-
-[data-theme="dark"] .theme-toggle-label-dark {
-  display: none;
-}
-
-[data-theme="dark"] .theme-toggle-label-light {
   display: none;
 }
 
