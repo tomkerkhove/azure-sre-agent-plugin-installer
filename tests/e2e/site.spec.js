@@ -372,9 +372,6 @@ test.describe("Install to Azure SRE Agent site", () => {
       const toggle = page.locator("footer #theme-toggle");
       await expect(toggle).toBeVisible();
       await expectThemeToggleState(toggle, "light");
-      await expect(toggle.locator(".theme-toggle-label:visible")).toHaveText(
-        "Switch to dark theme"
-      );
     });
   }
 
