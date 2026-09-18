@@ -1,7 +1,8 @@
-// Cookieless, consent-gated Azure Application Insights telemetry.
+// Cookieless, region-aware Azure Application Insights telemetry.
 //
 // Design goals (see PRIVACY.md):
-//   * No telemetry at all until the visitor explicitly opts in.
+//   * Ask for consent in Europe and whenever the visitor's region is unclear.
+//   * Enable analytics elsewhere while preserving explicit privacy choices.
 //   * No cookies, no fingerprinting, no personal data and no free-text input.
 //   * No third-party script: events are posted directly to the Application
 //     Insights ingestion REST API so the page can keep a strict CSP.
@@ -14,9 +15,90 @@
   "use strict";
 
   var CONSENT_STORAGE_KEY = "sre-agent-plugin-installer.analytics-consent";
+  var CONSENT_STORAGE_PROBE_KEY =
+    "sre-agent-plugin-installer.analytics-consent-probe";
+  var CONSENT_CHANNEL_NAME = "sre-agent-plugin-installer.analytics-consent-sync";
   var CONSENT_VERSION = 2;
   var MAX_PROPERTIES = 12;
   var MAX_PROPERTY_LENGTH = 256;
+  var NON_EUROPEAN_TIME_ZONE_PREFIXES = [
+    "Africa/",
+    "America/",
+    "Antarctica/",
+    "Asia/",
+    "Australia/",
+    "Indian/",
+    "Pacific/",
+  ];
+  var EUROPEAN_TIME_ZONE_EXCEPTIONS = {
+    "Africa/Ceuta": true,
+    "America/Cayenne": true,
+    "America/Guadeloupe": true,
+    "America/Marigot": true,
+    "America/Martinique": true,
+    "Asia/Famagusta": true,
+    "Asia/Istanbul": true,
+    "Asia/Nicosia": true,
+    "Indian/Mayotte": true,
+    "Indian/Reunion": true,
+  };
+  var NON_EUROPEAN_TIME_ZONE_ALIASES = {
+    "Atlantic/Bermuda": true,
+    "Atlantic/Cape_Verde": true,
+    "Atlantic/South_Georgia": true,
+    "Atlantic/St_Helena": true,
+    "Atlantic/Stanley": true,
+    "Brazil/Acre": true,
+    "Brazil/DeNoronha": true,
+    "Brazil/East": true,
+    "Brazil/West": true,
+    "Canada/Atlantic": true,
+    "Canada/Central": true,
+    "Canada/Eastern": true,
+    "Canada/Mountain": true,
+    "Canada/Newfoundland": true,
+    "Canada/Pacific": true,
+    "Canada/Saskatchewan": true,
+    "Canada/Yukon": true,
+    "Chile/Continental": true,
+    "Chile/EasterIsland": true,
+    Cuba: true,
+    CST6CDT: true,
+    Egypt: true,
+    EST5EDT: true,
+    HST: true,
+    Hongkong: true,
+    Iran: true,
+    Israel: true,
+    Jamaica: true,
+    Japan: true,
+    Kwajalein: true,
+    Libya: true,
+    "Mexico/BajaNorte": true,
+    "Mexico/BajaSur": true,
+    "Mexico/General": true,
+    MST7MDT: true,
+    Navajo: true,
+    NZ: true,
+    "NZ-CHAT": true,
+    PRC: true,
+    PST8PDT: true,
+    ROC: true,
+    ROK: true,
+    Singapore: true,
+    "US/Alaska": true,
+    "US/Aleutian": true,
+    "US/Arizona": true,
+    "US/Central": true,
+    "US/East-Indiana": true,
+    "US/Eastern": true,
+    "US/Hawaii": true,
+    "US/Indiana-Starke": true,
+    "US/Michigan": true,
+    "US/Mountain": true,
+    "US/Pacific": true,
+    "US/Samoa": true,
+  };
   var SAFE_EXCEPTION_TYPES = [
     "Error",
     "EvalError",
@@ -46,8 +128,10 @@
   var GUID_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  function safeStorage(storage) {
+  function safeStorage(name) {
     try {
+      var storage = window[name];
+      if (!storage) return null;
       var probe = "__probe__";
       storage.setItem(probe, "1");
       storage.removeItem(probe);
@@ -57,36 +141,152 @@
     }
   }
 
-  var localStore = safeStorage(window.localStorage);
-  var sessionStore = safeStorage(window.sessionStorage);
+  var localStore = safeStorage("localStorage");
+  var sessionStore = safeStorage("sessionStorage");
+  var consentStore = null;
+  var consentChannel = null;
+  var consentNeedsRenewal = false;
+  var latestConsentDecisionAt = 0;
+
+  function consentStorageCandidates(preferredStore) {
+    var stores = [];
+    if (preferredStore) stores.push(preferredStore);
+    if (localStore && stores.indexOf(localStore) === -1) stores.push(localStore);
+    if (sessionStore && stores.indexOf(sessionStore) === -1) stores.push(sessionStore);
+    return stores;
+  }
 
   function readConsent() {
-    if (!localStore) return null;
-    try {
-      var raw = localStore.getItem(CONSENT_STORAGE_KEY);
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
-      if (!parsed || parsed.version !== CONSENT_VERSION) return null;
-      return parsed.granted === true ? "granted" : "denied";
-    } catch (error) {
-      return null;
+    var stores = consentStorageCandidates();
+    var hadReadError = false;
+    var hadInvalidRecord = false;
+    var latestDecision = null;
+    for (var i = 0; i < stores.length; i++) {
+      var raw;
+      try {
+        raw = stores[i].getItem(CONSENT_STORAGE_KEY);
+        if (!consentStore) consentStore = stores[i];
+      } catch (error) {
+        hadReadError = true;
+        continue;
+      }
+      if (raw === null) continue;
+
+      consentStore = stores[i];
+      var parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (error) {
+        hadInvalidRecord = true;
+        continue;
+      }
+      if (!parsed || parsed.version !== CONSENT_VERSION) {
+        hadInvalidRecord = true;
+        continue;
+      }
+      var decidedAt =
+        typeof parsed.decidedAt === "string" ? Date.parse(parsed.decidedAt) : 0;
+      if (!isFinite(decidedAt)) decidedAt = 0;
+      if (!latestDecision || decidedAt > latestDecision.decidedAt) {
+        latestDecision = {
+          consent:
+            parsed.reset === true
+              ? null
+              : parsed.granted === true
+                ? "granted"
+                : "denied",
+          decidedAt: decidedAt,
+          store: stores[i],
+        };
+      }
+    }
+
+    if (latestDecision) {
+      consentStore = latestDecision.store;
+      latestConsentDecisionAt = Math.max(
+        latestConsentDecisionAt,
+        latestDecision.decidedAt
+      );
+      consentNeedsRenewal = latestDecision.consent === null;
+      return latestDecision.consent;
+    }
+    if (hadReadError || hadInvalidRecord) {
+      consentNeedsRenewal = true;
+    }
+    return null;
+  }
+
+  function nextConsentDecisionAt() {
+    return new Date(
+      Math.max(Date.now(), latestConsentDecisionAt + 1)
+    ).toISOString();
+  }
+
+  function writeStoredConsent(value) {
+    var stores = consentStorageCandidates();
+    for (var i = 0; i < stores.length; i++) {
+      try {
+        stores[i].setItem(CONSENT_STORAGE_KEY, value);
+        consentStore = stores[i];
+        for (var j = 0; j < stores.length; j++) {
+          if (j === i) continue;
+          try {
+            stores[j].removeItem(CONSENT_STORAGE_KEY);
+          } catch (error) {
+            /* A newer record in the selected store still takes precedence. */
+          }
+        }
+        return;
+      } catch (error) {
+        /* Try the next available preference store. */
+      }
     }
   }
 
-  function writeConsent(granted) {
-    if (!localStore) return;
-    try {
-      localStore.setItem(
-        CONSENT_STORAGE_KEY,
-        JSON.stringify({
-          version: CONSENT_VERSION,
-          granted: granted,
-          decidedAt: new Date().toISOString(),
-        })
-      );
-    } catch (error) {
-      /* Consent simply is not remembered when storage is unavailable. */
+  function writeConsent(granted, decidedAt) {
+    decidedAt = decidedAt || nextConsentDecisionAt();
+    latestConsentDecisionAt = Date.parse(decidedAt);
+    writeStoredConsent(
+      JSON.stringify({
+        version: CONSENT_VERSION,
+        granted: granted,
+        decidedAt: decidedAt,
+      })
+    );
+  }
+
+  function writeConsentReset(decidedAt) {
+    latestConsentDecisionAt = Date.parse(decidedAt);
+    writeStoredConsent(
+      JSON.stringify({
+        version: CONSENT_VERSION,
+        reset: true,
+        decidedAt: decidedAt,
+      })
+    );
+  }
+
+  function canPersistConsent() {
+    var value = JSON.stringify({ version: CONSENT_VERSION, writable: true });
+    var stores = consentStorageCandidates();
+    for (var i = 0; i < stores.length; i++) {
+      try {
+        stores[i].setItem(CONSENT_STORAGE_PROBE_KEY, value);
+        if (stores[i].getItem(CONSENT_STORAGE_PROBE_KEY) !== value) continue;
+        stores[i].removeItem(CONSENT_STORAGE_PROBE_KEY);
+        consentStore = stores[i];
+        return true;
+      } catch (error) {
+        try {
+          if (stores[i].getItem(CONSENT_STORAGE_PROBE_KEY) === value) {
+            stores[i].removeItem(CONSENT_STORAGE_PROBE_KEY);
+          }
+        } catch (cleanupError) {
+          /* A leftover probe contains no consent choice and is ignored. */
+        }
+      }
     }
+    return false;
   }
 
   function parseConnectionString(connectionString) {
@@ -198,10 +398,65 @@
     return result;
   }
 
+  function isKnownNonEuropeanTimeZone(timeZone) {
+    if (EUROPEAN_TIME_ZONE_EXCEPTIONS[timeZone] === true) return false;
+    if (NON_EUROPEAN_TIME_ZONE_ALIASES[timeZone] === true) return true;
+
+    for (var i = 0; i < NON_EUROPEAN_TIME_ZONE_PREFIXES.length; i++) {
+      if (timeZone.indexOf(NON_EUROPEAN_TIME_ZONE_PREFIXES[i]) === 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function canonicalizeTimeZone(timeZone) {
+    try {
+      var canonicalTimeZone = Intl.DateTimeFormat(undefined, {
+        timeZone: timeZone,
+      }).resolvedOptions().timeZone;
+      return typeof canonicalTimeZone === "string" && canonicalTimeZone
+        ? canonicalTimeZone
+        : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function requiresConsent() {
+    try {
+      var timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (typeof timeZone !== "string" || !timeZone) return true;
+
+      // Only identifiers known to be outside Europe bypass consent. European
+      // aliases, fixed offsets and malformed values all fail closed.
+      var canonicalTimeZone = canonicalizeTimeZone(timeZone);
+      return (
+        canonicalTimeZone === null ||
+        !isKnownNonEuropeanTimeZone(canonicalTimeZone)
+      );
+    } catch (error) {
+      return true;
+    }
+  }
+
   var config = (window.SITE_CONFIG && window.SITE_CONFIG.telemetry) || {};
   var endpoint = parseConnectionString(config.connectionString);
   var cloudRole = config.cloudRole || "sre-agent-plugin-installer";
   var consent = readConsent();
+  initConsentSync();
+  if (
+    consent === null &&
+    !consentNeedsRenewal &&
+    !requiresConsent() &&
+    canPersistConsent()
+  ) {
+    consentNeedsRenewal = false;
+    consent = readConsent();
+    if (consent === null && !consentNeedsRenewal) {
+      consent = "granted";
+    }
+  }
   var operationId = "";
 
   function configured() {
@@ -385,9 +640,34 @@
     }
   }
 
+  function applySynchronizedConsent(nextConsent) {
+    consent = nextConsent;
+    if (consent !== "granted") {
+      resetSession();
+    }
+    renderConsentUi();
+    flushPendingPageView();
+  }
+
+  function broadcastConsent(nextConsent, decidedAt) {
+    if (!consentChannel) return;
+    try {
+      consentChannel.postMessage({
+        version: CONSENT_VERSION,
+        consent: nextConsent,
+        decidedAt: decidedAt,
+      });
+    } catch (error) {
+      /* The storage event remains available when broadcasting fails. */
+    }
+  }
+
   function setConsent(granted) {
+    var decidedAt = nextConsentDecisionAt();
     consent = granted ? "granted" : "denied";
-    writeConsent(granted);
+    consentNeedsRenewal = false;
+    writeConsent(granted, decidedAt);
+    broadcastConsent(consent, decidedAt);
     if (!granted) {
       resetSession();
     }
@@ -445,15 +725,12 @@
     if (change) {
       change.addEventListener("click", function (event) {
         event.preventDefault();
+        var decidedAt = nextConsentDecisionAt();
+        latestConsentDecisionAt = Date.parse(decidedAt);
         consent = null;
         resetSession();
-        if (localStore) {
-          try {
-            localStore.removeItem(CONSENT_STORAGE_KEY);
-          } catch (error) {
-            /* ignore */
-          }
-        }
+        writeConsentReset(decidedAt);
+        broadcastConsent(null, decidedAt);
         renderConsentUi();
         var acceptButton = document.getElementById("consent-accept");
         if (acceptButton) {
@@ -463,6 +740,46 @@
     }
 
     renderConsentUi();
+  }
+
+  function initConsentSync() {
+    if (typeof window.addEventListener !== "function") return;
+
+    window.addEventListener("storage", function (event) {
+      if (!event || event.key !== CONSENT_STORAGE_KEY) return;
+      if (event.storageArea && localStore && event.storageArea !== localStore) return;
+
+      consentNeedsRenewal = false;
+      applySynchronizedConsent(readConsent());
+    });
+
+    try {
+      if (typeof window.BroadcastChannel !== "function") return;
+      consentChannel = new window.BroadcastChannel(CONSENT_CHANNEL_NAME);
+      consentChannel.onmessage = function (event) {
+        var message = event && event.data;
+        if (!message || message.version !== CONSENT_VERSION) return;
+        if (
+          message.consent !== "granted" &&
+          message.consent !== "denied" &&
+          message.consent !== null
+        ) {
+          return;
+        }
+        var decidedAt = Date.parse(message.decidedAt);
+        if (!isFinite(decidedAt) || decidedAt <= latestConsentDecisionAt) return;
+        consentNeedsRenewal = false;
+        latestConsentDecisionAt = decidedAt;
+        if (message.consent === null) {
+          writeConsentReset(message.decidedAt);
+        } else {
+          writeConsent(message.consent === "granted", message.decidedAt);
+        }
+        applySynchronizedConsent(message.consent);
+      };
+    } catch (error) {
+      consentChannel = null;
+    }
   }
 
   function initExceptionTracking() {
