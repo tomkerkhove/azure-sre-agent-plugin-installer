@@ -49,15 +49,16 @@ body {
 
 .theme-toggle {
   display: inline-flex;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  height: auto;
 }
 
 .theme-icon {
   width: 20px;
   height: 20px;
+  flex-shrink: 0;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -75,6 +76,18 @@ body {
 
 [data-theme="dark"] .theme-icon-sun {
   display: block;
+}
+
+.theme-toggle-label-light {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle-label-dark {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle-label-light {
+  display: inline;
 }
 
 header.hero {
