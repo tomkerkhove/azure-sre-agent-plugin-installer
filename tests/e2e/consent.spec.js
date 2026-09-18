@@ -626,6 +626,23 @@ test.describe("Privacy consent", () => {
     await expect(otherPage.locator("#consent-status")).toHaveText(
       "Anonymous analytics: on."
     );
+    await otherPage.evaluate(() => {
+      const consentKey = "sre-agent-plugin-installer.analytics-consent";
+      const setItem = Storage.prototype.setItem;
+      const removeItem = Storage.prototype.removeItem;
+      Storage.prototype.setItem = function (key, value) {
+        if (this === localStorage && key === consentKey) {
+          throw new DOMException("Local storage write failed");
+        }
+        return setItem.call(this, key, value);
+      };
+      Storage.prototype.removeItem = function (key) {
+        if (this === localStorage && key === consentKey) {
+          throw new DOMException("Local storage removal failed");
+        }
+        return removeItem.call(this, key);
+      };
+    });
 
     await otherPage.locator("#consent-change").click();
     await otherPage.locator("#consent-decline").click();

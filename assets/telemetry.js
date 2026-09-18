@@ -15,6 +15,7 @@
   "use strict";
 
   var CONSENT_STORAGE_KEY = "sre-agent-plugin-installer.analytics-consent";
+  var CONSENT_CHANNEL_NAME = "sre-agent-plugin-installer.analytics-consent-sync";
   var CONSENT_VERSION = 2;
   var MAX_PROPERTIES = 12;
   var MAX_PROPERTY_LENGTH = 256;
@@ -130,6 +131,7 @@
   var localStore = safeStorage("localStorage");
   var sessionStore = safeStorage("sessionStorage");
   var consentStore = null;
+  var consentChannel = null;
   var consentNeedsRenewal = false;
 
   function consentStorageCandidates(preferredStore) {
@@ -574,10 +576,32 @@
     }
   }
 
+  function applySynchronizedConsent(nextConsent) {
+    consent = nextConsent;
+    if (consent !== "granted") {
+      resetSession();
+    }
+    renderConsentUi();
+    flushPendingPageView();
+  }
+
+  function broadcastConsent(nextConsent) {
+    if (!consentChannel) return;
+    try {
+      consentChannel.postMessage({
+        version: CONSENT_VERSION,
+        consent: nextConsent,
+      });
+    } catch (error) {
+      /* The storage event remains available when broadcasting fails. */
+    }
+  }
+
   function setConsent(granted) {
     consent = granted ? "granted" : "denied";
     consentNeedsRenewal = false;
     writeConsent(granted);
+    broadcastConsent(consent);
     if (!granted) {
       resetSession();
     }
@@ -638,6 +662,7 @@
         consent = null;
         resetSession();
         clearStoredConsent();
+        broadcastConsent(null);
         renderConsentUi();
         var acceptButton = document.getElementById("consent-accept");
         if (acceptButton) {
@@ -657,13 +682,33 @@
       if (event.storageArea && localStore && event.storageArea !== localStore) return;
 
       consentNeedsRenewal = false;
-      consent = readConsent();
-      if (consent !== "granted") {
-        resetSession();
-      }
-      renderConsentUi();
-      flushPendingPageView();
+      applySynchronizedConsent(readConsent());
     });
+
+    try {
+      if (typeof window.BroadcastChannel !== "function") return;
+      consentChannel = new window.BroadcastChannel(CONSENT_CHANNEL_NAME);
+      consentChannel.onmessage = function (event) {
+        var message = event && event.data;
+        if (!message || message.version !== CONSENT_VERSION) return;
+        if (
+          message.consent !== "granted" &&
+          message.consent !== "denied" &&
+          message.consent !== null
+        ) {
+          return;
+        }
+        consentNeedsRenewal = false;
+        if (message.consent === null) {
+          clearStoredConsent();
+        } else {
+          writeConsent(message.consent === "granted");
+        }
+        applySynchronizedConsent(message.consent);
+      };
+    } catch (error) {
+      consentChannel = null;
+    }
   }
 
   function initExceptionTracking() {
