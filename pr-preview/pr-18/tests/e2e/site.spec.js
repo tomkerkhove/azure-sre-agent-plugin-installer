@@ -7,12 +7,50 @@ test.describe("Install to Azure SRE Agent site", () => {
     });
   });
 
-  test("shows the empty state when no repo is specified", async ({ page }) => {
+  test("shows the plugin details form when no repo is specified", async ({ page }) => {
     await page.goto("/install.html");
 
     await expect(page.locator("#empty-state")).toBeVisible();
+    await expect(page.locator("#plugin-details-form")).toBeVisible();
     await expect(page.locator("#install-card")).toBeHidden();
     await expect(page.locator("h1")).toHaveText("Install to Azure SRE Agent");
+  });
+
+  test("continues to the install flow with manually entered plugin details", async ({ page }) => {
+    await page.goto("/install.html");
+
+    await page.locator("#plugin-repo").fill("https://github.com/owner/repo");
+    await page.locator("#plugin-path").fill("plugins/my-plugin");
+    await page.locator("#plugin-details-form button[type=submit]").click();
+
+    await expect(page.locator("#empty-state")).toBeHidden();
+    await expect(page.locator("#install-card")).toBeVisible();
+    await expect(page.locator("#install-card h2 span")).toHaveText("owner/repo");
+    await expect(page.locator("#install-card dd code")).toHaveText("plugins/my-plugin");
+    await expect(page).toHaveURL(
+      /\/install\.html\?repo=owner%2Frepo&path=plugins%2Fmy-plugin$/
+    );
+  });
+
+  test("validates manually entered plugin details", async ({ page }) => {
+    await page.goto("/install.html");
+
+    await page.locator("#plugin-repo").fill("not-a-repository");
+    await page.locator("#plugin-details-form button[type=submit]").click();
+
+    await expect(page.locator("#plugin-details-error")).toContainText(
+      "Please enter a valid GitHub repository"
+    );
+    await expect(page.locator("#install-card")).toBeHidden();
+
+    await page.locator("#plugin-repo").fill("owner/repo");
+    await page.locator("#plugin-path").fill("../../etc/passwd");
+    await page.locator("#plugin-details-form button[type=submit]").click();
+
+    await expect(page.locator("#plugin-details-error")).toContainText(
+      "Please enter a valid path within the repository"
+    );
+    await expect(page.locator("#install-card")).toBeHidden();
   });
 
   test("loads the bundled MSAL browser library", async ({ page }) => {
