@@ -328,26 +328,36 @@ test.describe("Install to Azure SRE Agent site", () => {
   test("applies the dark theme before the page finishes loading, avoiding a flash of the light theme", async ({
     page,
   }) => {
-    // `waitUntil: "commit"` returns as soon as navigation commits, without
-    // waiting for the stylesheet, images or assets/app.js to load. Without
-    // assets/theme-init.js applying the theme synchronously up front, the
-    // page would still show the default `light` theme baked into the
-    // markup at this point, only switching to `dark` later once
-    // assets/app.js runs on `DOMContentLoaded` - which is the flash this
-    // guards against.
+    // assets/theme-init.js is a blocking, synchronous <script> that loads
+    // before assets/style.css in <head> (see index.html/install.html), so
+    // the browser cannot request the stylesheet until theme-init.js has
+    // finished executing. Waiting for that stylesheet request (rather than
+    // an arbitrary timeout, or `waitUntil: "commit"` alone) gives a
+    // deterministic point at which theme-init.js is guaranteed to already
+    // have applied the theme, without waiting for assets/app.js to run on
+    // `DOMContentLoaded` - which would mask a regression where
+    // theme-init.js was removed or delayed.
+    const stylesheetRequested = new Promise((resolve) => {
+      page.route("**/assets/style.css", (route) => {
+        resolve();
+        route.abort();
+      });
+    });
+
     await page.goto("/install.html?repo=owner/repo&theme=dark", {
       waitUntil: "commit",
     });
+    await stylesheetRequested;
 
     // Read the attribute once immediately instead of using an
     // auto-retrying `expect(...).toHaveAttribute(...)`, which would keep
     // polling until assets/app.js applies the theme on `DOMContentLoaded`
     // and could pass even if the synchronous, up-front application in
     // assets/theme-init.js were removed or delayed.
-    const themeAtCommit = await page
+    const themeBeforeStylesheetLoads = await page
       .locator("html")
       .getAttribute("data-theme");
-    expect(themeAtCommit).toBe("dark");
+    expect(themeBeforeStylesheetLoads).toBe("dark");
   });
 
   test("toggles the page theme and preserves the selection in the URL", async ({ page }) => {
