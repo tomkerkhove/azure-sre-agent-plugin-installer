@@ -1,5 +1,12 @@
 const { test, expect } = require("@playwright/test");
 
+// `getComputedStyle` reports durations with their unit ("0.2s" or "0.01ms"),
+// so they are normalized to milliseconds before being compared.
+function toMilliseconds(duration) {
+  const value = parseFloat(duration);
+  return /ms$/.test(duration) ? value : value * 1000;
+}
+
 test.describe("accessibility", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("https://api.github.com/**", async (route) => {
@@ -29,8 +36,14 @@ test.describe("accessibility", () => {
     test(`shows a focus outline on keyboard focus on ${path}`, async ({ page }) => {
       await page.goto(path);
 
+      // `:focus-visible` only matches when the browser is in keyboard
+      // modality, so the control is reached with the keyboard rather than a
+      // programmatic focus call alone.
       const toggle = page.locator("#theme-toggle");
       await toggle.focus();
+      await page.keyboard.press("Shift+Tab");
+      await page.keyboard.press("Tab");
+      await expect(toggle).toBeFocused();
 
       const outline = await toggle.evaluate((element) => {
         const styles = window.getComputedStyle(element);
@@ -58,14 +71,14 @@ test.describe("accessibility", () => {
       );
 
       durations.forEach((duration) => {
-        expect(parseFloat(duration)).toBeLessThanOrEqual(0.0001);
+        expect(toMilliseconds(duration)).toBeLessThanOrEqual(1);
       });
 
       await page.emulateMedia({ reducedMotion: "no-preference" });
       const defaultDuration = await page.evaluate(
         () => window.getComputedStyle(document.querySelector("#toast")).transitionDuration
       );
-      expect(parseFloat(defaultDuration)).toBeGreaterThan(0.0001);
+      expect(toMilliseconds(defaultDuration)).toBeGreaterThan(1);
     });
 
     test(`announces toast messages on ${path}`, async ({ page }) => {
