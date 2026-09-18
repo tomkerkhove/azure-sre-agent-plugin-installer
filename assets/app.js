@@ -195,9 +195,10 @@ function updateSiteNavLinks(theme) {
   links.forEach((link) => {
     const href = link.getAttribute("href");
     if (!href) return;
-    // Resolve against the current URL only to compute the query string;
-    // the relative path itself is preserved as authored so the link keeps
-    // working from deployments served under a subpath, such as PR previews.
+    // Resolve against the current URL only to compute the query string and
+    // fragment; the relative path itself is preserved as authored so the
+    // link keeps working from deployments served under a subpath, such as
+    // PR previews.
     const [beforeHash] = href.split("#");
     const [relativePath] = beforeHash.split("?");
     // A fragment-only or query-only href (e.g. "#section") has no path to
@@ -1423,5 +1424,6 @@ if (typeof module !== "undefined" && module.exports) {
     initPluginDetailsForm,
     DEFAULT_THEME,
     SUPPORTED_THEMES,
+    updateSiteNavLinks,
   };
 }
