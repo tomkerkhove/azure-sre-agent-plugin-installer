@@ -176,6 +176,22 @@ header.hero p {
   font-size: 0.8rem;
 }
 
+.logo-concepts-grid .logo-concepts-wordmark {
+  grid-column: span 2;
+}
+
+.logo-concepts-wordmark img {
+  width: 100%;
+  height: auto;
+  max-width: 280px;
+}
+
+@media (max-width: 360px) {
+  .logo-concepts-grid .logo-concepts-wordmark {
+    grid-column: auto;
+  }
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);

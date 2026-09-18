@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 180" role="img" aria-labelledby="title">
+  <title id="title">Azure SRE Agent</title>
+  <path fill="#0078d4" d="m22 118 51-89h45l-25 44-24 45H22Z"/>
+  <path fill="#2899f5" d="m73 29 45 0 43 75H113L73 29Z"/>
+  <path fill="#50e6ff" d="m113 104 24-42 24 42-24 42-24-42Z"/>
+  <path fill="#106ebe" d="m73 29 20 44-24 45H22l51-89Z" opacity=".48"/>
+  <text x="184" y="67" fill="#106ebe" font-family="Segoe UI, Arial, sans-serif" font-size="50" font-weight="700">Azure</text>
+  <text x="184" y="117" fill="#0078d4" font-family="Segoe UI, Arial, sans-serif" font-size="50" font-weight="700">SRE Agent</text>
+  <path d="M184 135h266" stroke="#50e6ff" stroke-width="4"/>
+  <text x="184" y="158" fill="#5c6470" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" letter-spacing="2">OBSERVE  /  AUTOMATE  /  RESTORE</text>
+</svg>

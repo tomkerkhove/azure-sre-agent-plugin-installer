@@ -275,13 +275,13 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(output).toContainText("path=plugins%2Fmy-plugin");
   });
 
-  test("renders five accessible SVG logo concepts", async ({ page }) => {
+  test("renders six accessible SVG logo concepts", async ({ page }) => {
     await page.goto("/");
 
     const concepts = page.locator(".logo-concepts");
     await expect(concepts).toBeVisible();
     await expect(concepts.getByRole("heading", { level: 2 })).toHaveText("Logo concepts");
-    await expect(concepts.locator("img")).toHaveCount(5);
+    await expect(concepts.locator("img")).toHaveCount(6);
     await expect(concepts.locator("img").first()).toHaveAttribute(
       "src",
       "assets/logos/sre-beacon.svg"
@@ -289,6 +289,14 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(concepts.locator("img").first()).toHaveAttribute(
       "alt",
       /logo concept$/
+    );
+    await expect(concepts.locator(".logo-concepts-wordmark img")).toHaveAttribute(
+      "src",
+      "assets/logos/azure-sre-agent.svg"
+    );
+    await expect(concepts.locator(".logo-concepts-wordmark img")).toHaveAttribute(
+      "alt",
+      "Azure SRE Agent wordmark logo concept"
     );
   });
 
