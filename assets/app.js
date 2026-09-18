@@ -385,6 +385,15 @@ function sanitizeRepositoryReadmeHtml(markup, repo) {
   return template.innerHTML;
 }
 
+function parseJsonOrNull(text) {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    if (error instanceof SyntaxError) return null;
+    throw error;
+  }
+}
+
 async function loadRepositoryReadme(repo) {
   const content = document.getElementById("repository-readme-content");
   const status = document.getElementById("repository-readme-status");
@@ -422,17 +431,13 @@ async function loadRepositoryReadme(repo) {
       response,
       README_MAX_LENGTH
     );
+    const payload = parseJsonOrNull(responseText);
     let markup = responseText;
-    try {
-      const payload = JSON.parse(responseText);
-      if (payload && typeof payload.content === "string") {
-        markup = payload.content;
-      } else {
+    if (payload) {
+      if (typeof payload.content !== "string") {
         throw new Error("README response is invalid");
       }
-    } catch (error) {
-      if (!(error instanceof SyntaxError)) throw error;
-      // The GitHub HTML media type can return rendered HTML directly.
+      markup = payload.content;
     }
 
     const sanitizedMarkup = sanitizeRepositoryReadmeHtml(

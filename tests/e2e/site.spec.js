@@ -66,7 +66,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     ).toBe(true);
   });
 
-  test("allows legacy badge redirects to load GitHub README previews", async ({ page }) => {
+  test("exposes a CSP that permits GitHub README API and image sources", async ({ page }) => {
     await page.goto("/");
 
     const policy = await page
