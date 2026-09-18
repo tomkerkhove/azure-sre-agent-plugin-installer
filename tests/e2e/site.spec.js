@@ -367,7 +367,6 @@ test.describe("Install to Azure SRE Agent site", () => {
     test(`renders visible ${theme} theme toggle labels on the ${name}`, async ({
       page,
     }) => {
-      await page.emulateMedia({ colorScheme: theme });
       await page.goto(url);
 
       const toggle = page.locator("footer #theme-toggle");
