@@ -749,6 +749,34 @@ describe("regional consent", () => {
 
     expect(telemetry.isEnabled()).toBe(false);
   });
+
+  test("honors consent written by another tab during automatic initialization", () => {
+    const backingStorage = createStorage();
+    const localStorage = {
+      getItem: backingStorage.getItem,
+      removeItem: backingStorage.removeItem,
+      setItem: (key, value) => {
+        if (key === "sre-agent-plugin-installer.analytics-consent-probe") {
+          backingStorage.setItem(
+            "sre-agent-plugin-installer.analytics-consent",
+            JSON.stringify({
+              version: 2,
+              granted: false,
+              decidedAt: "2026-01-01T00:00:00.000Z",
+            })
+          );
+        }
+        backingStorage.setItem(key, value);
+      },
+    };
+
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      timeZone: "America/New_York",
+    });
+
+    expect(telemetry.isEnabled()).toBe(false);
+  });
 });
 
 describe("exception telemetry", () => {

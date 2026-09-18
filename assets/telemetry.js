@@ -444,13 +444,18 @@
   var endpoint = parseConnectionString(config.connectionString);
   var cloudRole = config.cloudRole || "sre-agent-plugin-installer";
   var consent = readConsent();
+  initConsentSync();
   if (
     consent === null &&
     !consentNeedsRenewal &&
     !requiresConsent() &&
     canPersistConsent()
   ) {
-    consent = "granted";
+    consentNeedsRenewal = false;
+    consent = readConsent();
+    if (consent === null && !consentNeedsRenewal) {
+      consent = "granted";
+    }
   }
   var operationId = "";
 
@@ -804,7 +809,6 @@
     setConsent: setConsent,
   };
 
-  initConsentSync();
   initExceptionTracking();
   document.addEventListener("DOMContentLoaded", initConsentUi);
 })();
