@@ -857,18 +857,11 @@ function initOnlineInstaller(repo, path) {
   const details = document.getElementById("agent-details");
   const installBtn = document.getElementById("install-btn");
   const status = document.getElementById("online-status");
-  const fallbackOptions = [
-    document.getElementById("portal-install-option"),
-    document.getElementById("cli-install-option"),
-  ];
   const config = getInstallerConfig();
   let agents = [];
 
   if (!config.clientId) {
     signInBtn.disabled = true;
-    fallbackOptions.forEach((option) => {
-      option.open = true;
-    });
     setStatus(
       status,
       "Online installation isn't configured yet. Use an alternative installation option below.",
@@ -932,9 +925,6 @@ function initOnlineInstaller(repo, path) {
         "success"
       );
     } catch (error) {
-      fallbackOptions.forEach((option) => {
-        option.open = true;
-      });
       trackException(error, { handled: true, operation: "list-agents" });
       setStatus(status, getFriendlyError(error, "list"), "error");
     } finally {
@@ -1036,9 +1026,6 @@ function initOnlineInstaller(repo, path) {
         "success"
       );
     } catch (error) {
-      fallbackOptions.forEach((option) => {
-        option.open = true;
-      });
       trackException(error, { handled: true, operation: "install-plugin" });
       setStatus(status, getFriendlyError(error, "install"), "error");
     } finally {
