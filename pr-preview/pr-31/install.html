@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://github.com https://img.shields.io https://*.githubusercontent.com; connect-src https://api.github.com https://login.microsoftonline.com https://management.azure.com https://*.azuresre.ai https://dc.services.visualstudio.com https://*.applicationinsights.azure.com https://*.monitor.azure.com https://*.applicationinsights.azure.cn https://*.monitor.azure.cn https://*.applicationinsights.azure.us https://*.monitor.azure.us; frame-src https://login.microsoftonline.com; base-uri 'none'; form-action 'self'"
+  />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <!--
+    Avoids a light-to-dark flash; see assets/theme-init.js for why it must
+    load here, after the CSP/referrer meta tags but before the stylesheet
+    and assets/app.js.
+  -->
+  <script src="assets/theme-init.js"></script>
+  <title>Install a plugin - Azure SRE Agent Plugin Installer</title>
+  <meta
+    name="description"
+    content="Install a community plugin to your Azure SRE Agent instance using a repo link, similar to a 'Deploy to Azure' button."
+  />
+  <meta property="og:title" content="Azure SRE Agent Plugin Installer" />
+  <meta property="og:description" content="Install, connect, and empower your Azure SRE Agent plugins." />
+  <meta property="og:image" content="https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/assets/logos/png/github-social-card-light-1280x640.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="assets/logos/favicon/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="assets/logos/favicon/favicon-180x180.png" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="wrapper">
+    <header class="hero">
+      <div
+        class="brand-logo"
+        role="img"
+        aria-label="Azure SRE Agent Plugin Installer"
+      ></div>
+    </header>
+
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav-link" href="index.html">Generate a badge</a>
+      <a class="site-nav-link" href="install.html" aria-current="page">Install a plugin</a>
+    </nav>
+
+    <section class="page-intro" aria-labelledby="install-heading">
+      <h1 id="install-heading">Install a plugin into your agent</h1>
+      <p>
+        Install an
+        <a href="https://aka.ms/sreagent" target="_blank" rel="noopener noreferrer">Azure SRE Agent</a>
+        plugin into your own instance in one click.
+      </p>
+    </section>
+
+    <section class="card" id="install-card" hidden></section>
+
+    <section class="card" id="empty-state">
+      <h2>Enter plugin details</h2>
+      <p>
+        Enter the GitHub repository for the plugin you want to install.
+      </p>
+      <form id="plugin-details-form">
+        <div class="field">
+          <label for="plugin-repo">GitHub repository</label>
+          <input
+            id="plugin-repo"
+            type="text"
+            placeholder="owner/repo or https://github.com/owner/repo"
+            required
+          />
+        </div>
+        <div class="field">
+          <label for="plugin-path">Path in repository (optional)</label>
+          <input id="plugin-path" type="text" placeholder="plugins/my-plugin" />
+        </div>
+        <button type="submit">Continue</button>
+      </form>
+      <p class="status" id="plugin-details-error" role="alert" hidden></p>
+    </section>
+
+    <footer>
+      <p id="consent-manage" hidden>
+        <span id="consent-status"></span>
+        <a href="#" id="consent-change" hidden>Change privacy choice</a>
+        &middot;
+        <a href="https://github.com/tomkerkhove/azure-sre-agent-plugin-installer/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">Privacy statement</a>
+      </p>
+      <p>
+        Not affiliated with Microsoft. Built to help the
+        <a href="https://aka.ms/sreagent" target="_blank" rel="noopener noreferrer">Azure SRE Agent</a>
+        plugin ecosystem grow.
+        <a
+          href="https://github.com/tomkerkhove/azure-sre-agent-plugin-installer"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Contribute on GitHub</a
+        >.
+      </p>
+      <button
+        type="button"
+        class="secondary theme-toggle"
+        id="theme-toggle"
+        aria-label="Switch to dark theme"
+        title="Switch to dark theme"
+      >
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path>
+        </svg>
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+        </svg>
+        <span class="theme-toggle-label theme-toggle-label-dark" aria-hidden="true">Switch to dark theme</span>
+        <span class="theme-toggle-label theme-toggle-label-light" aria-hidden="true">Switch to light theme</span>
+      </button>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="consent-banner" id="consent-banner" role="region" aria-live="polite" aria-label="Privacy choice" hidden>
+    <div class="consent-banner-text">
+      <strong>Help us improve this site?</strong>
+      <p>
+        We would like to collect pseudonymous usage and reliability analytics (pages viewed, which
+        plugins are installed, and application error categories) in Azure Application Insights. No
+        cookies and no tracking across sites. Analytics start automatically only when your browser
+        time zone is known to be outside Europe and preference storage is available; otherwise,
+        nothing is collected unless you agree. See our
+        <a href="https://github.com/tomkerkhove/azure-sre-agent-plugin-installer/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">privacy statement</a>.
+      </p>
+    </div>
+    <div class="consent-banner-actions">
+      <button type="button" id="consent-accept">Allow analytics</button>
+      <button type="button" class="secondary" id="consent-decline">Decline</button>
+    </div>
+  </div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/telemetry.js"></script>
+  <script src="assets/vendor/msal-browser.min.js"></script>
+  <script src="assets/install-page.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
