@@ -27,17 +27,20 @@ describe.each(["index.html", "install.html"])(
       expect(themeInitIndex).toBeLessThan(appJsIndex);
     });
 
-    test("loads theme-init.js after the Content-Security-Policy meta tag", () => {
-      // A meta-delivered CSP only applies to content that follows it in the
-      // document, so theme-init.js must load after it to stay covered by
-      // the policy - while still preceding the stylesheet and assets/app.js
-      // (see the test above) to avoid the flash.
+    test("loads theme-init.js after the Content-Security-Policy and referrer meta tags", () => {
+      // A meta-delivered CSP and referrer policy only apply to content that
+      // follows them in the document, so theme-init.js must load after
+      // both to stay covered - while still preceding the stylesheet and
+      // assets/app.js (see the test above) to avoid the flash.
       const cspIndex = html.indexOf('http-equiv="Content-Security-Policy"');
+      const referrerIndex = html.indexOf('name="referrer"');
       const themeInitIndex = html.indexOf('src="assets/theme-init.js"');
 
       expect(cspIndex).toBeGreaterThan(-1);
+      expect(referrerIndex).toBeGreaterThan(-1);
       expect(themeInitIndex).toBeGreaterThan(-1);
       expect(cspIndex).toBeLessThan(themeInitIndex);
+      expect(referrerIndex).toBeLessThan(themeInitIndex);
     });
   }
 );

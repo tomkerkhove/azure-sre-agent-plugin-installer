@@ -26,8 +26,14 @@ if (typeof require === "function") {
 // `window.ThemeInit` in the browser, or as this require's return value in
 // Node, so this file always reads them from one clearly defined source
 // rather than relying on identifiers implicitly shared or mutated globals.
-const { DEFAULT_THEME, SUPPORTED_THEMES, normalizeTheme } =
+const themeInit =
   typeof require === "function" ? require("./theme-init.js") : window.ThemeInit;
+if (!themeInit) {
+  throw new Error(
+    "assets/theme-init.js must load before assets/app.js (see index.html/install.html) so window.ThemeInit is defined."
+  );
+}
+const { DEFAULT_THEME, SUPPORTED_THEMES, normalizeTheme } = themeInit;
 
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
 const SRE_AGENT_API_DOCS_URL =
