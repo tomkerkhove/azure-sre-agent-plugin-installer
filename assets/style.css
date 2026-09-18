@@ -141,10 +141,11 @@ header.hero {
 }
 
 .page-intro {
-  margin: 0 0 16px;
+  width: min(100%, 560px);
+  margin: 0 auto 16px;
 }
 
-.page-intro h2 {
+.page-intro h1 {
   margin: 0 0 18px;
   color: var(--heading-ink);
   font-size: clamp(1.6rem, 4vw, 1.75rem);
@@ -175,7 +176,7 @@ header.hero {
     padding: 8px 10px;
   }
 
-  .page-intro h2 {
+  .page-intro h1 {
     font-size: 1.45rem;
   }
 }
