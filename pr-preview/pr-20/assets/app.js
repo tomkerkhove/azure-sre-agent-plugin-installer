@@ -1318,7 +1318,10 @@ function init() {
 
   if (window.siteTelemetry) {
     window.siteTelemetry.trackPageView({
-      scenario: repo ? "plugin-install" : "badge-generator",
+      scenario:
+        repo || document.getElementById("plugin-details-form")
+          ? "plugin-install"
+          : "badge-generator",
       repository: repo || "",
       hasPath: Boolean(path),
     });
