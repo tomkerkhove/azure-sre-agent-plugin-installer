@@ -582,6 +582,16 @@ test.describe("Privacy consent", () => {
     await page.goto("/");
     await page.locator("#consent-accept").click();
     await expect(page.locator("#consent-banner")).toBeHidden();
+    await page.evaluate(() =>
+      sessionStorage.setItem(
+        "sre-agent-plugin-installer.analytics-consent",
+        JSON.stringify({
+          version: 2,
+          granted: false,
+          decidedAt: new Date().toISOString(),
+        })
+      )
+    );
 
     await page.locator("#consent-change").click();
 
@@ -589,5 +599,15 @@ test.describe("Privacy consent", () => {
     await expect(page.locator("#consent-status")).toHaveText(
       "Anonymous analytics: awaiting your choice."
     );
+    expect(
+      await page.evaluate(() => ({
+        local: localStorage.getItem(
+          "sre-agent-plugin-installer.analytics-consent"
+        ),
+        session: sessionStorage.getItem(
+          "sre-agent-plugin-installer.analytics-consent"
+        ),
+      }))
+    ).toEqual({ local: null, session: null });
   });
 });

@@ -387,6 +387,11 @@ describe("regional consent", () => {
       timeZone: "America/New_York",
     });
     first.telemetry.setConsent(false);
+    expect(
+      JSON.parse(
+        sessionStorage.getItem("sre-agent-plugin-installer.analytics-consent")
+      ).granted
+    ).toBe(false);
 
     const second = loadTelemetry(VALID_CONNECTION_STRING, {
       localStorage: null,
@@ -451,7 +456,62 @@ describe("regional consent", () => {
       timeZone: "America/New_York",
     });
     first.telemetry.setConsent(false);
+    expect(
+      JSON.parse(
+        sessionStorage.getItem("sre-agent-plugin-installer.analytics-consent")
+      ).granted
+    ).toBe(false);
 
+    const second = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      sessionStorage,
+      timeZone: "America/New_York",
+    });
+
+    expect(second.telemetry.isEnabled()).toBe(false);
+  });
+
+  test("prefers a newer session fallback choice over stale local consent", () => {
+    const backingStorage = createStorage();
+    backingStorage.setItem(
+      "sre-agent-plugin-installer.analytics-consent",
+      JSON.stringify({
+        version: 2,
+        granted: true,
+        decidedAt: "2026-01-01T00:00:00.000Z",
+      })
+    );
+    const localStorage = {
+      getItem: backingStorage.getItem,
+      removeItem: (key) => {
+        if (key === "__probe__") {
+          backingStorage.removeItem(key);
+          return;
+        }
+        throw new Error("Local storage removal failed");
+      },
+      setItem: (key, value) => {
+        if (key === "__probe__") {
+          backingStorage.setItem(key, value);
+          return;
+        }
+        throw new Error("Local storage write failed");
+      },
+    };
+    const sessionStorage = createStorage();
+    const first = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      sessionStorage,
+      timeZone: "America/New_York",
+    });
+    expect(first.telemetry.isEnabled()).toBe(true);
+
+    first.telemetry.setConsent(false);
+    expect(
+      JSON.parse(
+        sessionStorage.getItem("sre-agent-plugin-installer.analytics-consent")
+      ).granted
+    ).toBe(false);
     const second = loadTelemetry(VALID_CONNECTION_STRING, {
       localStorage,
       sessionStorage,
