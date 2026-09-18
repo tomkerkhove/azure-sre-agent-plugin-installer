@@ -291,10 +291,18 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.goto("/");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await expect(page.locator("header.hero")).toHaveCSS(
-      "background-color",
-      "rgb(255, 255, 255)"
-    );
+    const heroBackground = await page
+      .locator("header.hero")
+      .evaluate((element) => getComputedStyle(element).backgroundColor);
+    const surfaceBackground = await page.evaluate(() => {
+      const probe = document.createElement("div");
+      probe.style.backgroundColor = "var(--surface)";
+      document.body.append(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    });
+    expect(heroBackground).toBe(surfaceBackground);
     await expect(page.locator("header.hero p")).toHaveCount(0);
     await expect(page.locator(".page-intro h2")).toHaveText(
       "Generate your installation badge"
@@ -307,7 +315,9 @@ test.describe("Install to Azure SRE Agent site", () => {
   test("shows the install page intro in the redesigned layout", async ({ page }) => {
     await page.goto("/install.html");
 
-    await expect(page.locator(".page-intro h2")).toHaveText("Install a plugin");
+    await expect(page.locator(".page-intro h2")).toHaveText(
+      "Install a plugin into your agent"
+    );
     await expect(page.locator(".page-intro")).toContainText(
       "Install an Azure SRE Agent plugin into your own instance in one click."
     );
