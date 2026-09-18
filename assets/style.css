@@ -122,6 +122,12 @@ header.hero {
   top: 8px;
 }
 
+/* The skip link target is focusable via tabindex="-1" so activating the link
+   really moves focus, but it must not show an outline of its own. */
+#main-content:focus {
+  outline: none;
+}
+
 :focus-visible {
   outline: 3px solid var(--azure-blue);
   outline-offset: 2px;

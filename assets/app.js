@@ -1253,12 +1253,32 @@ function renderInstallCard(repo, path) {
 
 // Screen reader users only hear an error when it is announced and tied to the
 // field that caused it, so every validation failure sets `aria-invalid` and
-// points the field at the message element describing it.
+// adds the message element to the field's description. `aria-describedby` is a
+// token list, so the error id is appended to (and later removed from) any
+// descriptions the field already had instead of replacing them.
+function describedByTokens(input) {
+  return (input.getAttribute("aria-describedby") || "")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function setDescribedByTokens(input, tokens) {
+  if (tokens.length) {
+    input.setAttribute("aria-describedby", tokens.join(" "));
+  } else {
+    input.removeAttribute("aria-describedby");
+  }
+}
+
 function markFieldInvalid(input, errorElement) {
   if (!input) return;
   input.setAttribute("aria-invalid", "true");
   if (errorElement && errorElement.id) {
-    input.setAttribute("aria-describedby", errorElement.id);
+    const tokens = describedByTokens(input);
+    if (!tokens.includes(errorElement.id)) {
+      tokens.push(errorElement.id);
+    }
+    setDescribedByTokens(input, tokens);
   }
 }
 
@@ -1268,12 +1288,11 @@ function clearFieldErrors(inputs, errorElement) {
     input.removeAttribute("aria-invalid");
     // Only drop the description this helper added, so any other description
     // (for example a hint) stays associated with the field.
-    if (
-      errorElement &&
-      errorElement.id &&
-      input.getAttribute("aria-describedby") === errorElement.id
-    ) {
-      input.removeAttribute("aria-describedby");
+    if (errorElement && errorElement.id) {
+      setDescribedByTokens(
+        input,
+        describedByTokens(input).filter((token) => token !== errorElement.id)
+      );
     }
   });
   if (errorElement) {

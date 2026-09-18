@@ -21,6 +21,51 @@ test.describe("accessibility", () => {
       await page.keyboard.press("Tab");
       await expect(skipLink).toBeFocused();
       await expect(skipLink).toBeInViewport();
+
+      await page.keyboard.press("Enter");
+      await expect(page.locator("main#main-content")).toBeFocused();
+    });
+
+    test(`shows a focus outline on keyboard focus on ${path}`, async ({ page }) => {
+      await page.goto(path);
+
+      const toggle = page.locator("#theme-toggle");
+      await toggle.focus();
+
+      const outline = await toggle.evaluate((element) => {
+        const styles = window.getComputedStyle(element);
+        return {
+          style: styles.outlineStyle,
+          width: styles.outlineWidth,
+          offset: styles.outlineOffset,
+        };
+      });
+
+      expect(outline.style).not.toBe("none");
+      expect(parseFloat(outline.width)).toBeGreaterThanOrEqual(2);
+      expect(parseFloat(outline.offset)).toBeGreaterThan(0);
+    });
+
+    test(`suppresses transitions when reduced motion is preferred on ${path}`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto(path);
+
+      const durations = await page.evaluate(() =>
+        [
+          document.querySelector(".skip-link"),
+          document.querySelector("#toast"),
+        ].map((element) => window.getComputedStyle(element).transitionDuration)
+      );
+
+      durations.forEach((duration) => {
+        expect(parseFloat(duration)).toBeLessThanOrEqual(0.0001);
+      });
+
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      const defaultDuration = await page.evaluate(
+        () => window.getComputedStyle(document.querySelector("#toast")).transitionDuration
+      );
+      expect(parseFloat(defaultDuration)).toBeGreaterThan(0.0001);
     });
 
     test(`announces toast messages on ${path}`, async ({ page }) => {

@@ -110,4 +110,38 @@ describe("manual plugin details form", () => {
 
     expect(pathField.getAttribute("aria-describedby")).toBe("plugin-path-hint");
   });
+
+  test("appends the error to an existing description and removes only it", () => {
+    setUpForm();
+    const pathField = document.getElementById("plugin-path");
+    pathField.setAttribute("aria-describedby", "plugin-path-hint");
+    const form = document.getElementById("plugin-details-form");
+
+    document.getElementById("plugin-repo").value = "owner/repo";
+    pathField.value = "../../etc/passwd";
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(pathField.getAttribute("aria-describedby")).toBe(
+      "plugin-path-hint plugin-details-error"
+    );
+
+    pathField.value = "plugins/my-plugin";
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(pathField.getAttribute("aria-describedby")).toBe("plugin-path-hint");
+  });
+
+  test("does not duplicate the error description across submissions", () => {
+    setUpForm();
+    const repoField = document.getElementById("plugin-repo");
+    const form = document.getElementById("plugin-details-form");
+    repoField.value = "not-a-repository";
+
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(repoField.getAttribute("aria-describedby")).toBe(
+      "plugin-details-error"
+    );
+  });
 });
