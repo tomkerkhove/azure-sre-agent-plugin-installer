@@ -173,6 +173,46 @@ describe("loadRepositoryReadme", () => {
     );
   });
 
+  test("treats JSON arrays as direct README markup", async () => {
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue('["Azure Carbon SRE"]'),
+    });
+
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+
+    expect(document.getElementById("repository-readme-content").textContent).toBe(
+      '["Azure Carbon SRE"]'
+    );
+    expect(document.getElementById("repository-readme-content").hidden).toBe(
+      false
+    );
+  });
+
+  test("shows the fallback when a JSON wrapper omits content", async () => {
+    document.body.innerHTML = `
+      <p id="repository-readme-status">Loading README…</p>
+      <div id="repository-readme-content" hidden></div>
+    `;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(JSON.stringify({ name: "README.md" })),
+    });
+
+    await loadRepositoryReadme("tomkerkhove/azure-carbon-sre");
+
+    expect(document.getElementById("repository-readme-status").textContent).toBe(
+      "The README preview is unavailable. View it on GitHub instead."
+    );
+    expect(document.getElementById("repository-readme-content").hidden).toBe(
+      true
+    );
+  });
+
   test("shows the fallback when the GitHub request times out", async () => {
     jest.useFakeTimers();
     document.body.innerHTML = `

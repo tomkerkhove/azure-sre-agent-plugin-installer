@@ -386,10 +386,10 @@ function sanitizeRepositoryReadmeHtml(markup, repo) {
 }
 
 /**
- * Returns a JSON object when the response is an object wrapper, or null when
- * the response is rendered HTML or another JSON primitive.
+ * Returns a JSON object wrapper, or null when the response should be treated
+ * as direct markup, including rendered HTML, arrays, and JSON primitives.
  */
-function parseJsonObjectOrNull(text) {
+function parseReadmeJsonWrapper(text) {
   try {
     const value = JSON.parse(text);
     return value && typeof value === "object" && !Array.isArray(value)
@@ -438,7 +438,7 @@ async function loadRepositoryReadme(repo) {
       response,
       README_MAX_LENGTH
     );
-    const payload = parseJsonObjectOrNull(responseText);
+    const payload = parseReadmeJsonWrapper(responseText);
     let markup = responseText;
     if (payload) {
       if (typeof payload.content !== "string") {
