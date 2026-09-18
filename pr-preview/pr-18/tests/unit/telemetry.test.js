@@ -21,6 +21,31 @@ function createStorage() {
   };
 }
 
+function createBroadcastChannelClass() {
+  const channels = [];
+  class BroadcastChannel {
+    constructor(name) {
+      this.name = name;
+      this.onmessage = null;
+      channels.push(this);
+    }
+
+    postMessage(data) {
+      for (const channel of channels) {
+        if (
+          channel !== this &&
+          channel.name === this.name &&
+          typeof channel.onmessage === "function"
+        ) {
+          channel.onmessage({ data });
+        }
+      }
+    }
+  }
+  BroadcastChannel.channels = channels;
+  return BroadcastChannel;
+}
+
 // Minimal browser-like harness: telemetry.js is an IIFE meant for the browser,
 // so it is evaluated in a sandbox with just the globals it touches.
 function loadTelemetry(connectionString, options = {}) {
@@ -84,6 +109,7 @@ function loadTelemetry(connectionString, options = {}) {
     },
     localStorage,
     sessionStorage,
+    BroadcastChannel: options.BroadcastChannel,
   };
   sandbox.window = sandbox;
 
@@ -232,6 +258,71 @@ describe("consent gating", () => {
     expect(requests).toHaveLength(1);
   });
 
+  test("broadcasts a session-fallback withdrawal to another tab", () => {
+    const backingStorage = createStorage();
+    backingStorage.setItem(
+      "sre-agent-plugin-installer.analytics-consent",
+      JSON.stringify({
+        version: 2,
+        granted: true,
+        decidedAt: "2026-01-01T00:00:00.000Z",
+      })
+    );
+    const localStorage = {
+      getItem: backingStorage.getItem,
+      removeItem: (key) => {
+        if (key === "__probe__") {
+          backingStorage.removeItem(key);
+          return;
+        }
+        throw new Error("Local storage removal failed");
+      },
+      setItem: (key, value) => {
+        if (key === "__probe__") {
+          backingStorage.setItem(key, value);
+          return;
+        }
+        throw new Error("Local storage write failed");
+      },
+    };
+    const BroadcastChannel = createBroadcastChannelClass();
+    const secondSessionStorage = createStorage();
+    const first = loadTelemetry(VALID_CONNECTION_STRING, {
+      BroadcastChannel,
+      localStorage,
+      sessionStorage: createStorage(),
+    });
+    const second = loadTelemetry(VALID_CONNECTION_STRING, {
+      BroadcastChannel,
+      localStorage,
+      sessionStorage: secondSessionStorage,
+    });
+    second.telemetry.trackEvent("BeforeWithdrawal");
+
+    first.telemetry.setConsent(false);
+    second.telemetry.trackEvent("AfterWithdrawal");
+
+    expect(first.telemetry.isEnabled()).toBe(false);
+    expect(second.telemetry.isEnabled()).toBe(false);
+    expect(second.requests).toHaveLength(1);
+
+    BroadcastChannel.channels[1].onmessage({
+      data: {
+        version: 2,
+        consent: "granted",
+        decidedAt: "2026-01-01T00:00:00.000Z",
+      },
+    });
+    expect(second.telemetry.isEnabled()).toBe(false);
+
+    const reloadedSecond = loadTelemetry(VALID_CONNECTION_STRING, {
+      BroadcastChannel,
+      localStorage,
+      sessionStorage: secondSessionStorage,
+    });
+    expect(reloadedSecond.telemetry.isEnabled()).toBe(false);
+  });
+
   test("clears the session identifier when consent is withdrawn", () => {
     const { telemetry, sessionStorage } = loadTelemetry(VALID_CONNECTION_STRING);
     telemetry.setConsent(true);
@@ -341,6 +432,22 @@ describe("regional consent", () => {
     expect(telemetry.isEnabled()).toBe(false);
   });
 
+  test("requires consent for EU outermost-region time zones", () => {
+    for (const timeZone of [
+      "America/Cayenne",
+      "America/Guadeloupe",
+      "America/Marigot",
+      "America/Martinique",
+      "Indian/Mayotte",
+      "Indian/Reunion",
+    ]) {
+      const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+        timeZone,
+      });
+      expect(telemetry.isEnabled()).toBe(false);
+    }
+  });
+
   test("requires consent when the time zone does not identify a region", () => {
     const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
       timeZone: "UTC",
@@ -383,7 +490,16 @@ describe("regional consent", () => {
   });
 
   test("recognizes non-European legacy aliases", () => {
-    for (const timeZone of ["US/Eastern", "Canada/Pacific", "Japan"]) {
+    for (const timeZone of [
+      "US/Eastern",
+      "Canada/Pacific",
+      "Japan",
+      "CST6CDT",
+      "EST5EDT",
+      "HST",
+      "MST7MDT",
+      "PST8PDT",
+    ]) {
       const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
         timeZone,
       });
@@ -394,6 +510,13 @@ describe("regional consent", () => {
   test("requires consent when time zone detection fails", () => {
     const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
       timeZoneError: true,
+    });
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
+  test("requires consent when the time zone is missing", () => {
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      timeZone: null,
     });
     expect(telemetry.isEnabled()).toBe(false);
   });
@@ -561,6 +684,28 @@ describe("regional consent", () => {
       sessionStorage: null,
       timeZone: "America/New_York",
     });
+    expect(telemetry.isEnabled()).toBe(false);
+  });
+
+  test("requires consent when readable storage rejects consent writes", () => {
+    const backingStorage = createStorage();
+    const localStorage = {
+      getItem: backingStorage.getItem,
+      removeItem: backingStorage.removeItem,
+      setItem: (key, value) => {
+        if (key === "sre-agent-plugin-installer.analytics-consent") {
+          throw new Error("Consent write failed");
+        }
+        backingStorage.setItem(key, value);
+      },
+    };
+
+    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+      sessionStorage: null,
+      timeZone: "America/New_York",
+    });
+
     expect(telemetry.isEnabled()).toBe(false);
   });
 });

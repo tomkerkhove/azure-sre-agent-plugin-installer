@@ -95,6 +95,10 @@ function envelopes(ingestionRequests) {
   return ingestionRequests.flat();
 }
 
+async function openPortalInstallOption(page) {
+  await page.locator("#portal-install-option summary").click();
+}
+
 test.describe("Privacy consent", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("https://api.github.com/**", async (route) => {
@@ -136,6 +140,7 @@ test.describe("Privacy consent", () => {
       "otherwise, nothing is collected unless you agree"
     );
 
+    await openPortalInstallOption(page);
     await page.locator("#copy-repo-btn").click();
     await page.waitForTimeout(250);
     expect(ingestionRequests).toHaveLength(0);
@@ -188,6 +193,7 @@ test.describe("Privacy consent", () => {
 
     await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
+    await openPortalInstallOption(page);
     await page.locator("#copy-repo-btn").click();
 
     expect(await context.cookies()).toHaveLength(0);
@@ -242,6 +248,7 @@ test.describe("Privacy consent", () => {
 
     await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
+    await openPortalInstallOption(page);
     await page.locator("#copy-repo-btn").click();
 
     await expect
@@ -324,6 +331,8 @@ test.describe("Privacy consent", () => {
     await expect(page.locator("#online-status")).toContainText(
       "Azure returned: private discovery details"
     );
+    await expect(page.locator("#portal-install-option")).not.toHaveAttribute("open", "");
+    await expect(page.locator("#cli-install-option")).not.toHaveAttribute("open", "");
     await expect
       .poll(
         () =>
@@ -401,6 +410,8 @@ test.describe("Privacy consent", () => {
     await expect(page.locator("#online-status")).toContainText(
       "Azure returned: private installation details"
     );
+    await expect(page.locator("#portal-install-option")).not.toHaveAttribute("open", "");
+    await expect(page.locator("#cli-install-option")).not.toHaveAttribute("open", "");
     await expect
       .poll(
         () =>
@@ -440,6 +451,7 @@ test.describe("Privacy consent", () => {
 
     await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
+    await openPortalInstallOption(page);
     await page.locator("#copy-repo-btn").click();
     await page.waitForTimeout(250);
 
@@ -553,6 +565,7 @@ test.describe("Privacy consent", () => {
 
     await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-decline").click();
+    await openPortalInstallOption(page);
 
     await expect(page.locator("#consent-banner")).toBeHidden();
     await expect(page.locator("#consent-status")).toHaveText("Anonymous analytics: off.");
@@ -626,6 +639,23 @@ test.describe("Privacy consent", () => {
     await expect(otherPage.locator("#consent-status")).toHaveText(
       "Anonymous analytics: on."
     );
+    await otherPage.evaluate(() => {
+      const consentKey = "sre-agent-plugin-installer.analytics-consent";
+      const setItem = Storage.prototype.setItem;
+      const removeItem = Storage.prototype.removeItem;
+      Storage.prototype.setItem = function (key, value) {
+        if (this === localStorage && key === consentKey) {
+          throw new DOMException("Local storage write failed");
+        }
+        return setItem.call(this, key, value);
+      };
+      Storage.prototype.removeItem = function (key) {
+        if (this === localStorage && key === consentKey) {
+          throw new DOMException("Local storage removal failed");
+        }
+        return removeItem.call(this, key);
+      };
+    });
 
     await otherPage.locator("#consent-change").click();
     await otherPage.locator("#consent-decline").click();

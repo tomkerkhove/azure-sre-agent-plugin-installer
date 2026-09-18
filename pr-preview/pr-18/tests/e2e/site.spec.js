@@ -83,20 +83,27 @@ test.describe("Install to Azure SRE Agent site", () => {
   test("shows the fallback options when online installation is not configured", async ({ page }) => {
     await page.goto("/install.html?repo=owner/repo");
 
+    const installationOptions = page.locator("#install-card > details");
+    await expect(installationOptions).toHaveCount(3);
+    await expect(installationOptions.locator("summary")).toHaveText([
+      "Choose an Azure SRE Agent",
+      "Install in the Azure portal",
+      "Generate an Azure CLI command",
+    ]);
+    await expect(page.getByText("Other installation options")).toHaveCount(0);
     await expect(page.locator("#sign-in-btn")).toBeDisabled();
     await expect(page.locator("#online-status")).toContainText(
       "Online installation isn't configured yet"
     );
-    await expect(page.locator("#alternative-options")).toHaveAttribute("open", "");
-    await expect(page.locator("#api-import-form")).toBeVisible();
-    await expect(page.locator("#alternative-options h3")).toHaveText([
-      "Install in the Azure portal",
-      "Generate an Azure CLI command",
-    ]);
+    await expect(page.locator("#agent-install-option")).toHaveAttribute("open", "");
+    await expect(page.locator("#portal-install-option")).not.toHaveAttribute("open", "");
+    await expect(page.locator("#cli-install-option")).not.toHaveAttribute("open", "");
+    await expect(page.locator("#api-import-form")).toBeHidden();
   });
 
   test("generates an Azure CLI import command", async ({ page }) => {
     await page.goto("/install.html?repo=owner/repo&path=plugins/my-plugin");
+    await page.locator("#cli-install-option summary").click();
 
     await page.locator("#agent-endpoint").fill(
       "https://demo.hash.eastus.azuresre.ai"
@@ -116,6 +123,7 @@ test.describe("Install to Azure SRE Agent site", () => {
 
   test("rejects an invalid Azure SRE Agent endpoint", async ({ page }) => {
     await page.goto("/install.html?repo=owner/repo");
+    await page.locator("#cli-install-option summary").click();
 
     const endpointInput = page.locator("#agent-endpoint");
     const submitButton = page.locator(
@@ -244,6 +252,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   test("copies the repository to the clipboard", async ({ page, context }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.goto("/install.html?repo=owner/repo");
+    await page.locator("#portal-install-option summary").click();
 
     await page.locator("#copy-repo-btn").click();
 

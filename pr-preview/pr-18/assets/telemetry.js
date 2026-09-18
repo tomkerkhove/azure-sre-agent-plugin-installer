@@ -15,6 +15,7 @@
   "use strict";
 
   var CONSENT_STORAGE_KEY = "sre-agent-plugin-installer.analytics-consent";
+  var CONSENT_CHANNEL_NAME = "sre-agent-plugin-installer.analytics-consent-sync";
   var CONSENT_VERSION = 2;
   var MAX_PROPERTIES = 12;
   var MAX_PROPERTY_LENGTH = 256;
@@ -29,9 +30,15 @@
   ];
   var EUROPEAN_TIME_ZONE_EXCEPTIONS = {
     "Africa/Ceuta": true,
+    "America/Cayenne": true,
+    "America/Guadeloupe": true,
+    "America/Marigot": true,
+    "America/Martinique": true,
     "Asia/Famagusta": true,
     "Asia/Istanbul": true,
     "Asia/Nicosia": true,
+    "Indian/Mayotte": true,
+    "Indian/Reunion": true,
   };
   var NON_EUROPEAN_TIME_ZONE_ALIASES = {
     "Atlantic/Bermuda": true,
@@ -54,7 +61,10 @@
     "Chile/Continental": true,
     "Chile/EasterIsland": true,
     Cuba: true,
+    CST6CDT: true,
     Egypt: true,
+    EST5EDT: true,
+    HST: true,
     Hongkong: true,
     Iran: true,
     Israel: true,
@@ -65,10 +75,12 @@
     "Mexico/BajaNorte": true,
     "Mexico/BajaSur": true,
     "Mexico/General": true,
+    MST7MDT: true,
     Navajo: true,
     NZ: true,
     "NZ-CHAT": true,
     PRC: true,
+    PST8PDT: true,
     ROC: true,
     ROK: true,
     Singapore: true,
@@ -130,7 +142,9 @@
   var localStore = safeStorage("localStorage");
   var sessionStore = safeStorage("sessionStorage");
   var consentStore = null;
+  var consentChannel = null;
   var consentNeedsRenewal = false;
+  var latestConsentDecisionAt = 0;
 
   function consentStorageCandidates(preferredStore) {
     var stores = [];
@@ -168,6 +182,10 @@
         hadInvalidRecord = true;
         continue;
       }
+      if (parsed.probe === true) {
+        hadInvalidRecord = true;
+        continue;
+      }
 
       var decidedAt =
         typeof parsed.decidedAt === "string" ? Date.parse(parsed.decidedAt) : 0;
@@ -183,6 +201,10 @@
 
     if (latestDecision) {
       consentStore = latestDecision.store;
+      latestConsentDecisionAt = Math.max(
+        latestConsentDecisionAt,
+        latestDecision.decidedAt
+      );
       return latestDecision.consent;
     }
     if (hadReadError || hadInvalidRecord) {
@@ -191,11 +213,19 @@
     return null;
   }
 
-  function writeConsent(granted) {
+  function nextConsentDecisionAt() {
+    return new Date(
+      Math.max(Date.now(), latestConsentDecisionAt + 1)
+    ).toISOString();
+  }
+
+  function writeConsent(granted, decidedAt) {
+    decidedAt = decidedAt || nextConsentDecisionAt();
+    latestConsentDecisionAt = Date.parse(decidedAt);
     var value = JSON.stringify({
       version: CONSENT_VERSION,
       granted: granted,
-      decidedAt: new Date().toISOString(),
+      decidedAt: decidedAt,
     });
     var stores = consentStorageCandidates();
     for (var i = 0; i < stores.length; i++) {
@@ -226,6 +256,33 @@
         /* Ignore stores that are no longer available. */
       }
     }
+  }
+
+  function canPersistConsent() {
+    var value = JSON.stringify({
+      version: CONSENT_VERSION,
+      granted: false,
+      probe: true,
+    });
+    var stores = consentStorageCandidates();
+    for (var i = 0; i < stores.length; i++) {
+      try {
+        stores[i].setItem(CONSENT_STORAGE_KEY, value);
+        if (stores[i].getItem(CONSENT_STORAGE_KEY) !== value) continue;
+        stores[i].removeItem(CONSENT_STORAGE_KEY);
+        consentStore = stores[i];
+        return true;
+      } catch (error) {
+        try {
+          if (stores[i].getItem(CONSENT_STORAGE_KEY) === value) {
+            stores[i].removeItem(CONSENT_STORAGE_KEY);
+          }
+        } catch (cleanupError) {
+          /* A leftover probe is treated as invalid consent and fails closed. */
+        }
+      }
+    }
+    return false;
   }
 
   function parseConnectionString(connectionString) {
@@ -384,10 +441,10 @@
   var cloudRole = config.cloudRole || "sre-agent-plugin-installer";
   var consent = readConsent();
   if (
-    consentStore &&
     consent === null &&
     !consentNeedsRenewal &&
-    !requiresConsent()
+    !requiresConsent() &&
+    canPersistConsent()
   ) {
     consent = "granted";
   }
@@ -574,10 +631,34 @@
     }
   }
 
+  function applySynchronizedConsent(nextConsent) {
+    consent = nextConsent;
+    if (consent !== "granted") {
+      resetSession();
+    }
+    renderConsentUi();
+    flushPendingPageView();
+  }
+
+  function broadcastConsent(nextConsent, decidedAt) {
+    if (!consentChannel) return;
+    try {
+      consentChannel.postMessage({
+        version: CONSENT_VERSION,
+        consent: nextConsent,
+        decidedAt: decidedAt,
+      });
+    } catch (error) {
+      /* The storage event remains available when broadcasting fails. */
+    }
+  }
+
   function setConsent(granted) {
+    var decidedAt = nextConsentDecisionAt();
     consent = granted ? "granted" : "denied";
     consentNeedsRenewal = false;
-    writeConsent(granted);
+    writeConsent(granted, decidedAt);
+    broadcastConsent(consent, decidedAt);
     if (!granted) {
       resetSession();
     }
@@ -635,9 +716,12 @@
     if (change) {
       change.addEventListener("click", function (event) {
         event.preventDefault();
+        var decidedAt = nextConsentDecisionAt();
+        latestConsentDecisionAt = Date.parse(decidedAt);
         consent = null;
         resetSession();
         clearStoredConsent();
+        broadcastConsent(null, decidedAt);
         renderConsentUi();
         var acceptButton = document.getElementById("consent-accept");
         if (acceptButton) {
@@ -655,15 +739,48 @@
     window.addEventListener("storage", function (event) {
       if (!event || event.key !== CONSENT_STORAGE_KEY) return;
       if (event.storageArea && localStore && event.storageArea !== localStore) return;
+      try {
+        if (
+          (event.newValue && JSON.parse(event.newValue).probe === true) ||
+          (event.oldValue && JSON.parse(event.oldValue).probe === true)
+        ) {
+          return;
+        }
+      } catch (error) {
+        /* Invalid records are handled by readConsent and fail closed. */
+      }
 
       consentNeedsRenewal = false;
-      consent = readConsent();
-      if (consent !== "granted") {
-        resetSession();
-      }
-      renderConsentUi();
-      flushPendingPageView();
+      applySynchronizedConsent(readConsent());
     });
+
+    try {
+      if (typeof window.BroadcastChannel !== "function") return;
+      consentChannel = new window.BroadcastChannel(CONSENT_CHANNEL_NAME);
+      consentChannel.onmessage = function (event) {
+        var message = event && event.data;
+        if (!message || message.version !== CONSENT_VERSION) return;
+        if (
+          message.consent !== "granted" &&
+          message.consent !== "denied" &&
+          message.consent !== null
+        ) {
+          return;
+        }
+        var decidedAt = Date.parse(message.decidedAt);
+        if (!isFinite(decidedAt) || decidedAt <= latestConsentDecisionAt) return;
+        consentNeedsRenewal = false;
+        latestConsentDecisionAt = decidedAt;
+        if (message.consent === null) {
+          clearStoredConsent();
+        } else {
+          writeConsent(message.consent === "granted", message.decidedAt);
+        }
+        applySynchronizedConsent(message.consent);
+      };
+    } catch (error) {
+      consentChannel = null;
+    }
   }
 
   function initExceptionTracking() {
