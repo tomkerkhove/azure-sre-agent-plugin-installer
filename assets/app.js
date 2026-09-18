@@ -30,7 +30,7 @@ const themeInit =
   typeof require === "function" ? require("./theme-init.js") : window.ThemeInit;
 if (!themeInit) {
   throw new Error(
-    "assets/theme-init.js must load before assets/app.js (see index.html/install.html) so window.ThemeInit is defined."
+    'assets/theme-init.js must load before assets/app.js: its exports were not returned by require("./theme-init.js"), and window.ThemeInit is not defined either (see index.html/install.html for the expected script order).'
   );
 }
 const { DEFAULT_THEME, SUPPORTED_THEMES, normalizeTheme } = themeInit;

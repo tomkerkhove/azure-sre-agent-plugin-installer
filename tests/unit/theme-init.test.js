@@ -41,3 +41,22 @@ describe("applyInitialTheme", () => {
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
   });
 });
+
+describe("module load side effect", () => {
+  test("applies the theme from window.location.search as soon as the module loads, without waiting for a function call", () => {
+    // Regression test for the flash: theme-init.js must apply the theme as
+    // an immediate side effect of loading, not only when some other code
+    // later calls applyInitialTheme(). Navigating via pushState (rather
+    // than reassigning window.location) lets jsdom update
+    // window.location.search without reloading the page or the module
+    // registry, then a fresh require() re-runs theme-init.js's top-level
+    // code against that URL.
+    window.history.pushState(null, "", "/install.html?theme=dark");
+    document.documentElement.removeAttribute("data-theme");
+
+    jest.resetModules();
+    require("../../assets/theme-init.js");
+
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  });
+});
