@@ -1280,41 +1280,34 @@ function setDescribedByTokens(input, tokens) {
 
 function markFieldInvalid(input, errorElement) {
   input.setAttribute("aria-invalid", "true");
-  if (errorElement && errorElement.id) {
-    const tokens = describedByTokens(input);
-    if (!tokens.includes(errorElement.id)) {
-      tokens.push(errorElement.id);
-    }
-    setDescribedByTokens(input, tokens);
+  const tokens = describedByTokens(input);
+  if (!tokens.includes(errorElement.id)) {
+    tokens.push(errorElement.id);
   }
+  setDescribedByTokens(input, tokens);
 }
 
 function clearFieldErrors(inputs, errorElement) {
   inputs.forEach((input) => {
-    if (!input) return;
     input.removeAttribute("aria-invalid");
     // Only drop the description this helper added, so any other description
     // (for example a hint) stays associated with the field.
-    if (errorElement && errorElement.id) {
-      setDescribedByTokens(
-        input,
-        describedByTokens(input).filter((token) => token !== errorElement.id)
-      );
-    }
+    setDescribedByTokens(
+      input,
+      describedByTokens(input).filter((token) => token !== errorElement.id)
+    );
   });
-  if (errorElement) {
-    errorElement.textContent = "";
-    errorElement.hidden = true;
-  }
+  errorElement.textContent = "";
+  errorElement.hidden = true;
 }
 
 // Both forms report validation problems the same way: show the message in an
 // alert region, associate it with the offending field and move focus there so
 // keyboard and screen reader users land on what needs correcting.
-function reportFieldError({ errorElement, field, message }) {
-  errorElement.textContent = message;
-  errorElement.hidden = false;
-  markFieldInvalid(field, errorElement);
+function reportFieldError({ error, field, message }) {
+  error.textContent = message;
+  error.hidden = false;
+  markFieldInvalid(field, error);
   field.focus();
 }
 
@@ -1355,10 +1348,10 @@ function initFormElements(formId, elementIds) {
 function initGenerator() {
   const elements = initFormElements("generator-form", {
     output: "generator-output",
-    errorElement: "generator-error",
+    error: "generator-error",
   });
   if (!elements) return;
-  const { form, output, errorElement } = elements;
+  const { form, output, error } = elements;
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1371,7 +1364,7 @@ function initGenerator() {
     const themeInput = document.getElementById("gen-theme");
     const repo = normalizeRepo(repoInput);
 
-    clearFieldErrors([repoField, pathField], errorElement);
+    clearFieldErrors([repoField, pathField], error);
 
     let failure = null;
     if (rawPath && !pathInput) {
@@ -1395,7 +1388,7 @@ function initGenerator() {
       output.textContent = "";
       output.hidden = true;
       reportFieldError({
-        errorElement,
+        error,
         field: failure.field,
         message: failure.message,
       });
@@ -1448,7 +1441,7 @@ function initPluginDetailsForm() {
 
     if (!repo) {
       reportFieldError({
-        errorElement: error,
+        error,
         field: repoField,
         message:
           "Please enter a valid GitHub repository, e.g. owner/repo or https://github.com/owner/repo",
@@ -1458,7 +1451,7 @@ function initPluginDetailsForm() {
 
     if (rawPath && !path) {
       reportFieldError({
-        errorElement: error,
+        error,
         field: pathField,
         message:
           "Please enter a valid path within the repository, e.g. plugins/my-plugin",
