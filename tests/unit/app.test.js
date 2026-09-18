@@ -3,6 +3,7 @@ const {
   normalizeTheme,
   buildInstallerUrl,
   buildBadgeMarkdown,
+  buildRepositoryReadmeApiUrl,
   trackException,
 } = require("../../assets/app.js");
 const { getInstallPageUrl } = require("../../assets/install-page.js");
@@ -140,5 +141,13 @@ describe("buildBadgeMarkdown", () => {
     test("does nothing when telemetry is unavailable", () => {
       expect(() => trackException(new Error("test"))).not.toThrow();
     });
+  });
+});
+
+describe("buildRepositoryReadmeApiUrl", () => {
+  test("builds the GitHub rendered README endpoint", () => {
+    expect(buildRepositoryReadmeApiUrl("tomkerkhove/azure-carbon-sre")).toBe(
+      "https://api.github.com/repos/tomkerkhove/azure-carbon-sre/readme"
+    );
   });
 });
