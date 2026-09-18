@@ -103,6 +103,7 @@ test.describe("Install to Azure SRE Agent site", () => {
 
   test("generates an Azure CLI import command", async ({ page }) => {
     await page.goto("/install.html?repo=owner/repo&path=plugins/my-plugin");
+    await page.locator("#cli-install-option summary").click();
 
     await page.locator("#agent-endpoint").fill(
       "https://demo.hash.eastus.azuresre.ai"
@@ -122,6 +123,7 @@ test.describe("Install to Azure SRE Agent site", () => {
 
   test("rejects an invalid Azure SRE Agent endpoint", async ({ page }) => {
     await page.goto("/install.html?repo=owner/repo");
+    await page.locator("#cli-install-option summary").click();
 
     const endpointInput = page.locator("#agent-endpoint");
     const submitButton = page.locator(
@@ -250,6 +252,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   test("copies the repository to the clipboard", async ({ page, context }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.goto("/install.html?repo=owner/repo");
+    await page.locator("#portal-install-option summary").click();
 
     await page.locator("#copy-repo-btn").click();
 

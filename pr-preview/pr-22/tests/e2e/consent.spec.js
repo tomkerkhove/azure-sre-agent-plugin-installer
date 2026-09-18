@@ -85,6 +85,10 @@ function envelopes(ingestionRequests) {
   return ingestionRequests.flat();
 }
 
+async function openPortalInstallOption(page) {
+  await page.locator("#portal-install-option summary").click();
+}
+
 test.describe("Privacy consent", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("https://api.github.com/**", async (route) => {
@@ -120,6 +124,7 @@ test.describe("Privacy consent", () => {
       "application error categories"
     );
 
+    await openPortalInstallOption(page);
     await page.locator("#copy-repo-btn").click();
     await page.waitForTimeout(250);
     expect(ingestionRequests).toHaveLength(0);
@@ -131,6 +136,7 @@ test.describe("Privacy consent", () => {
 
     await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
+    await openPortalInstallOption(page);
     await page.locator("#copy-repo-btn").click();
 
     expect(await context.cookies()).toHaveLength(0);
@@ -185,6 +191,7 @@ test.describe("Privacy consent", () => {
 
     await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
+    await openPortalInstallOption(page);
     await page.locator("#copy-repo-btn").click();
 
     await expect
@@ -387,6 +394,7 @@ test.describe("Privacy consent", () => {
 
     await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
+    await openPortalInstallOption(page);
     await page.locator("#copy-repo-btn").click();
     await page.waitForTimeout(250);
 
@@ -500,6 +508,7 @@ test.describe("Privacy consent", () => {
 
     await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-decline").click();
+    await openPortalInstallOption(page);
 
     await expect(page.locator("#consent-banner")).toBeHidden();
     await expect(page.locator("#consent-status")).toHaveText("Anonymous analytics: off.");
