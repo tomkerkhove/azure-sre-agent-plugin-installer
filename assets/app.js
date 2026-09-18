@@ -385,38 +385,35 @@ function sanitizeRepositoryReadmeHtml(markup, repo) {
   return template.innerHTML;
 }
 
+function extractJsonReadmeContent(text) {
+  const payload = JSON.parse(text);
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    Array.isArray(payload) ||
+    typeof payload.content !== "string"
+  ) {
+    throw new Error("README response is invalid");
+  }
+  return payload.content;
+}
+
 /**
- * Returns a JSON wrapper when the response is JSON, direct markup when the
- * response is rendered HTML, and falls back to sniffing only without a type.
+ * @param {string} text README response body.
+ * @param {string | null | undefined} contentType Response Content-Type header.
+ * @returns {string} README markup to sanitize and render.
+ * @throws {Error} When a JSON README response does not include string content.
  */
 function parseReadmeMarkup(text, contentType) {
   const normalizedContentType = (contentType || "").toLowerCase();
   if (normalizedContentType.includes("text/html")) return text;
 
   if (normalizedContentType.includes("application/json")) {
-    const payload = JSON.parse(text);
-    if (
-      !payload ||
-      typeof payload !== "object" ||
-      Array.isArray(payload) ||
-      typeof payload.content !== "string"
-    ) {
-      throw new Error("README response is invalid");
-    }
-    return payload.content;
+    return extractJsonReadmeContent(text);
   }
 
   try {
-    const payload = JSON.parse(text);
-    if (
-      !payload ||
-      typeof payload !== "object" ||
-      Array.isArray(payload) ||
-      typeof payload.content !== "string"
-    ) {
-      throw new Error("README response is invalid");
-    }
-    return payload.content;
+    return extractJsonReadmeContent(text);
   } catch (error) {
     if (error instanceof SyntaxError) return text;
     throw error;
