@@ -386,17 +386,39 @@ function sanitizeRepositoryReadmeHtml(markup, repo) {
 }
 
 /**
- * Returns a JSON object wrapper, or null when the response should be treated
- * as direct markup, including rendered HTML, arrays, and JSON primitives.
+ * Returns a JSON wrapper when the response is JSON, direct markup when the
+ * response is rendered HTML, and falls back to sniffing only without a type.
  */
-function parseReadmeJsonWrapper(text) {
+function parseReadmeMarkup(text, contentType) {
+  const normalizedContentType = (contentType || "").toLowerCase();
+  if (normalizedContentType.includes("text/html")) return text;
+
+  if (normalizedContentType.includes("application/json")) {
+    const payload = JSON.parse(text);
+    if (
+      !payload ||
+      typeof payload !== "object" ||
+      Array.isArray(payload) ||
+      typeof payload.content !== "string"
+    ) {
+      throw new Error("README response is invalid");
+    }
+    return payload.content;
+  }
+
   try {
-    const value = JSON.parse(text);
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? value
-      : null;
+    const payload = JSON.parse(text);
+    if (
+      !payload ||
+      typeof payload !== "object" ||
+      Array.isArray(payload) ||
+      typeof payload.content !== "string"
+    ) {
+      throw new Error("README response is invalid");
+    }
+    return payload.content;
   } catch (error) {
-    if (error instanceof SyntaxError) return null;
+    if (error instanceof SyntaxError) return text;
     throw error;
   }
 }
@@ -438,14 +460,10 @@ async function loadRepositoryReadme(repo) {
       response,
       README_MAX_LENGTH
     );
-    const payload = parseReadmeJsonWrapper(responseText);
-    let markup = responseText;
-    if (payload) {
-      if (typeof payload.content !== "string") {
-        throw new Error("README response is invalid");
-      }
-      markup = payload.content;
-    }
+    const markup = parseReadmeMarkup(
+      responseText,
+      response.headers?.get("content-type")
+    );
 
     const sanitizedMarkup = sanitizeRepositoryReadmeHtml(
       markup,
