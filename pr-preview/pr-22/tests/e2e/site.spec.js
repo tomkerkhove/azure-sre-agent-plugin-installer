@@ -96,9 +96,9 @@ test.describe("Install to Azure SRE Agent site", () => {
       "Online installation isn't configured yet"
     );
     await expect(page.locator("#agent-install-option")).toHaveAttribute("open", "");
-    await expect(page.locator("#portal-install-option")).toHaveAttribute("open", "");
-    await expect(page.locator("#cli-install-option")).toHaveAttribute("open", "");
-    await expect(page.locator("#api-import-form")).toBeVisible();
+    await expect(page.locator("#portal-install-option")).not.toHaveAttribute("open", "");
+    await expect(page.locator("#cli-install-option")).not.toHaveAttribute("open", "");
+    await expect(page.locator("#api-import-form")).toBeHidden();
   });
 
   test("generates an Azure CLI import command", async ({ page }) => {
