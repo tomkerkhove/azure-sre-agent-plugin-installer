@@ -13,7 +13,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("#empty-state")).toBeVisible();
     await expect(page.locator("#plugin-details-form")).toBeVisible();
     await expect(page.locator("#install-card")).toBeHidden();
-    await expect(page.locator("h1")).toHaveText("Install to Azure SRE Agent");
+    await expect(page.locator("h1")).toHaveText("Azure SRE Agent Plugin Installer");
   });
 
   test("continues to the install flow with manually entered plugin details", async ({ page }) => {
