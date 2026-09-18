@@ -229,6 +229,25 @@ describe("consent gating", () => {
     expect(requests).toHaveLength(0);
   });
 
+  test("requires renewed consent outside Europe for every outdated choice", () => {
+    for (const granted of [true, false]) {
+      const localStorage = createStorage();
+      localStorage.setItem(
+        "sre-agent-plugin-installer.analytics-consent",
+        JSON.stringify({ version: 1, granted })
+      );
+
+      const { telemetry, requests } = loadTelemetry(VALID_CONNECTION_STRING, {
+        localStorage,
+        timeZone: "America/New_York",
+      });
+      telemetry.trackEvent("BadgeGenerated");
+
+      expect(telemetry.isEnabled()).toBe(false);
+      expect(requests).toHaveLength(0);
+    }
+  });
+
   test("does not store any cookie-like consent value when analytics are declined", () => {
     const localStorage = createStorage();
     const declined = loadTelemetry(VALID_CONNECTION_STRING, { localStorage });

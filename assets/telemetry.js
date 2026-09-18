@@ -130,6 +130,7 @@
   var localStore = safeStorage("localStorage");
   var sessionStore = safeStorage("sessionStorage");
   var consentStore = localStore || sessionStore;
+  var consentNeedsRenewal = false;
 
   function readConsent() {
     if (!consentStore) return null;
@@ -137,9 +138,13 @@
       var raw = consentStore.getItem(CONSENT_STORAGE_KEY);
       if (!raw) return null;
       var parsed = JSON.parse(raw);
-      if (!parsed || parsed.version !== CONSENT_VERSION) return null;
+      if (!parsed || parsed.version !== CONSENT_VERSION) {
+        consentNeedsRenewal = true;
+        return null;
+      }
       return parsed.granted === true ? "granted" : "denied";
     } catch (error) {
+      consentNeedsRenewal = true;
       return null;
     }
   }
@@ -298,7 +303,12 @@
   var endpoint = parseConnectionString(config.connectionString);
   var cloudRole = config.cloudRole || "sre-agent-plugin-installer";
   var consent = readConsent();
-  if (consentStore && consent === null && !requiresConsent()) {
+  if (
+    consentStore &&
+    consent === null &&
+    !consentNeedsRenewal &&
+    !requiresConsent()
+  ) {
     consent = "granted";
   }
   var operationId = "";
@@ -486,6 +496,7 @@
 
   function setConsent(granted) {
     consent = granted ? "granted" : "denied";
+    consentNeedsRenewal = false;
     writeConsent(granted);
     if (!granted) {
       resetSession();
