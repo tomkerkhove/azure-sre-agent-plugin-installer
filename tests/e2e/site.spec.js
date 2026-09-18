@@ -66,6 +66,18 @@ test.describe("Install to Azure SRE Agent site", () => {
     ).toBe(true);
   });
 
+  test("allows legacy badge redirects to load GitHub README previews", async ({ page }) => {
+    await page.goto("/");
+
+    const policy = await page
+      .locator('meta[http-equiv="Content-Security-Policy"]')
+      .getAttribute("content");
+
+    expect(policy).toContain("connect-src https://api.github.com");
+    expect(policy).toContain("img-src 'self' https://github.com");
+    expect(policy).toContain("https://*.githubusercontent.com");
+  });
+
   test("renders the install card when a repo query parameter is provided", async ({ page }) => {
     await page.goto("/install.html?repo=owner/repo");
 

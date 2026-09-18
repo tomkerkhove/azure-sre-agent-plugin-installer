@@ -422,13 +422,21 @@ async function loadRepositoryReadme(repo) {
       response,
       README_MAX_LENGTH
     );
-    const payload = JSON.parse(responseText);
-    if (!payload || typeof payload.content !== "string") {
-      throw new Error("README response is invalid");
+    let markup = responseText;
+    try {
+      const payload = JSON.parse(responseText);
+      if (payload && typeof payload.content === "string") {
+        markup = payload.content;
+      } else {
+        throw new Error("README response is invalid");
+      }
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      // The GitHub HTML media type can return rendered HTML directly.
     }
 
     const sanitizedMarkup = sanitizeRepositoryReadmeHtml(
-      payload.content,
+      markup,
       repo
     );
     if (!sanitizedMarkup.trim()) throw new Error("README is empty");
