@@ -13,7 +13,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("#empty-state")).toBeVisible();
     await expect(page.locator("#plugin-details-form")).toBeVisible();
     await expect(page.locator("#install-card")).toBeHidden();
-    await expect(page.locator("h1")).toHaveText("Install to Azure SRE Agent");
+    await expect(page.locator("h1")).toHaveText("Azure SRE Agent Plugin Installer");
   });
 
   test("continues to the install flow with manually entered plugin details", async ({ page }) => {
@@ -279,12 +279,32 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.goto("/");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(page.locator(".brand-logo")).toBeVisible();
+    await expect(page.locator("h1")).toHaveText(
+      "Azure SRE Agent Plugin Installer"
+    );
+    await expect(page.locator(".brand-logo")).toHaveCSS(
+      "background-image",
+      /logo-horizontal-light\.svg/
+    );
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
+      "href",
+      "assets/logos/favicon/favicon.ico"
+    );
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+      "content",
+      "https://tomkerkhove.github.io/azure-sre-agent-plugin-installer/assets/logos/png/github-social-card-light-1280x640.png"
+    );
   });
 
   test("uses the dark theme when the theme query parameter is dark", async ({ page }) => {
     await page.goto("/install.html?repo=owner/repo&theme=dark");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator(".brand-logo")).toHaveCSS(
+      "background-image",
+      /logo-horizontal-dark\.svg/
+    );
   });
 
   test("falls back to the light theme for an unsupported theme", async ({ page }) => {
@@ -299,7 +319,8 @@ test.describe("Install to Azure SRE Agent site", () => {
     const toggle = page.locator("#theme-toggle");
     await expect(page.locator("footer #theme-toggle")).toBeVisible();
     await expect(toggle).toHaveAccessibleName("Switch to dark theme");
-    await expect(toggle).toContainText("Switch to dark theme");
+    await expect(toggle.locator(".theme-toggle-label-dark")).toBeVisible();
+    await expect(toggle.locator(".theme-toggle-label-light")).toBeHidden();
     await expect(toggle.locator(".theme-icon-moon")).toBeVisible();
     await expect(toggle.locator(".theme-icon-sun")).toBeHidden();
 
@@ -307,7 +328,8 @@ test.describe("Install to Azure SRE Agent site", () => {
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(toggle).toHaveAccessibleName("Switch to light theme");
-    await expect(toggle).toContainText("Switch to light theme");
+    await expect(toggle.locator(".theme-toggle-label-dark")).toBeHidden();
+    await expect(toggle.locator(".theme-toggle-label-light")).toBeVisible();
     await expect(toggle.locator(".theme-icon-moon")).toBeHidden();
     await expect(toggle.locator(".theme-icon-sun")).toBeVisible();
     await expect(page).toHaveURL(/repo=owner%2Frepo&theme=dark$/);
