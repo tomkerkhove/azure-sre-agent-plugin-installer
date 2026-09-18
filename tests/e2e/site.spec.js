@@ -290,6 +290,7 @@ test.describe("Install to Azure SRE Agent site", () => {
   test("matches the supplied landing page layout", async ({ page }) => {
     await page.goto("/");
 
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await expect(page.locator("header.hero")).toHaveCSS(
       "background-color",
       "rgb(255, 255, 255)"
