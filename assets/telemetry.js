@@ -143,6 +143,8 @@
   function readConsent() {
     var stores = consentStorageCandidates();
     var hadReadError = false;
+    var hadInvalidRecord = false;
+    var latestDecision = null;
     for (var i = 0; i < stores.length; i++) {
       var raw;
       try {
@@ -159,16 +161,31 @@
       try {
         parsed = JSON.parse(raw);
       } catch (error) {
-        consentNeedsRenewal = true;
-        return null;
+        hadInvalidRecord = true;
+        continue;
       }
       if (!parsed || parsed.version !== CONSENT_VERSION) {
-        consentNeedsRenewal = true;
-        return null;
+        hadInvalidRecord = true;
+        continue;
       }
-      return parsed.granted === true ? "granted" : "denied";
+
+      var decidedAt =
+        typeof parsed.decidedAt === "string" ? Date.parse(parsed.decidedAt) : 0;
+      if (!isFinite(decidedAt)) decidedAt = 0;
+      if (!latestDecision || decidedAt > latestDecision.decidedAt) {
+        latestDecision = {
+          consent: parsed.granted === true ? "granted" : "denied",
+          decidedAt: decidedAt,
+          store: stores[i],
+        };
+      }
     }
-    if (hadReadError) {
+
+    if (latestDecision) {
+      consentStore = latestDecision.store;
+      return latestDecision.consent;
+    }
+    if (hadReadError || hadInvalidRecord) {
       consentNeedsRenewal = true;
     }
     return null;
@@ -180,14 +197,33 @@
       granted: granted,
       decidedAt: new Date().toISOString(),
     });
-    var stores = consentStorageCandidates(consentStore);
+    var stores = consentStorageCandidates();
     for (var i = 0; i < stores.length; i++) {
       try {
         stores[i].setItem(CONSENT_STORAGE_KEY, value);
         consentStore = stores[i];
+        for (var j = 0; j < stores.length; j++) {
+          if (j === i) continue;
+          try {
+            stores[j].removeItem(CONSENT_STORAGE_KEY);
+          } catch (error) {
+            /* A newer record in the selected store still takes precedence. */
+          }
+        }
         return;
       } catch (error) {
         /* Try the next available preference store. */
+      }
+    }
+  }
+
+  function clearStoredConsent() {
+    var stores = consentStorageCandidates();
+    for (var i = 0; i < stores.length; i++) {
+      try {
+        stores[i].removeItem(CONSENT_STORAGE_KEY);
+      } catch (error) {
+        /* Ignore stores that are no longer available. */
       }
     }
   }
@@ -601,13 +637,7 @@
         event.preventDefault();
         consent = null;
         resetSession();
-        if (consentStore) {
-          try {
-            consentStore.removeItem(CONSENT_STORAGE_KEY);
-          } catch (error) {
-            /* ignore */
-          }
-        }
+        clearStoredConsent();
         renderConsentUi();
         var acceptButton = document.getElementById("consent-accept");
         if (acceptButton) {
