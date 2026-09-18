@@ -9,9 +9,11 @@ usage analytics to [Azure Application Insights](https://learn.microsoft.com/azur
 
 * For visitors with a European browser time zone, analytics are **off by
   default**. Nothing is sent until you press **Allow analytics** in the banner.
-* Outside Europe, analytics start without showing the banner.
-* If the browser time zone is unavailable or does not identify a region,
-  analytics remain off and the site asks for consent.
+* Outside Europe, analytics start without showing the banner when first-party
+  preference storage is available.
+* If preference storage is unavailable, or the browser time zone is unavailable
+  or not known to be outside Europe, analytics remain off and the site asks for
+  consent.
 * Choosing **Decline** stops all telemetry; the choice is remembered in
   `localStorage`, or for the current tab in `sessionStorage` when local storage
   is unavailable (strictly functional, first-party entries, not cookies).
@@ -23,17 +25,18 @@ browser. This happens locally: the site does not make an IP geolocation request
 or share data with another service to determine the region. Time zones are only
 an approximation of location and can be affected by device settings or travel.
 To avoid collecting before consent when the result is unclear, UTC,
-fixed-offset, missing and unreadable time zones are treated as European.
+fixed-offset, unrecognized, missing and unreadable time zones require consent.
 
 ## No cookies
 
 The site sets **no cookies** and loads no third-party scripts, advertising or
-social media widgets. Two first-party browser storage entries are used:
+social media widgets. The following first-party browser storage entries are used:
 
 | Key | Storage | Purpose |
 | --- | --- | --- |
 | `sre-agent-plugin-installer.analytics-consent` | `localStorage`, or `sessionStorage` fallback | Remembers your privacy choice. |
 | `sre-agent-plugin-installer.session-id` | `sessionStorage` | Random per-tab identifier used to group events of a single visit. Cleared when the tab closes and when consent is withdrawn. |
+| `sre-agent-plugin-installer.readme.<owner/repo>` | `sessionStorage` | Caches a sanitized, rendered public repository README to avoid repeated GitHub requests. Cleared when the tab closes. |
 
 ## What is collected
 
@@ -46,6 +49,10 @@ When analytics are enabled, only these fields are collected:
   whether a sub-path was used.
 * A `PluginInstalls` custom metric, with that public repository name as a
   dimension, so installs can be counted per plugin.
+* Application exception occurrences, including an allowlisted exception
+  category, whether it was handled, the operation where it occurred and, for
+  API failures, the HTTP status code. Exception messages and stack traces are
+  discarded in the browser and are never sent.
 * Standard Application Insights ingestion metadata (timestamp, browser user
   agent, and a coarse, city-level location derived from your IP address). IP
   masking is left at its Azure default, so the IP address is used to derive that
@@ -58,7 +65,7 @@ data processor for the Azure Application Insights resource.
 
 What is **never** stored: names, e-mail addresses, IP addresses, Azure
 subscription or tenant identifiers, Azure credentials/tokens, the full page URL,
-or free-text you type into the badge generator.
+exception messages, stack traces, or free-text you type into the badge generator.
 
 ## Third-party content
 
@@ -66,7 +73,16 @@ The page embeds the "Install to Azure SRE Agent" badge image from
 [shields.io](https://shields.io). Loading that image is a request to a third
 party and happens before any privacy choice is made, because it is part of the
 page itself rather than analytics. shields.io therefore sees your IP address and
-browser user agent. No other third-party content, scripts or trackers are used.
+browser user agent.
+
+When a public plugin repository is selected, the browser requests its rendered
+README from the [GitHub API](https://docs.github.com/rest/repos/contents#get-a-repository-readme)
+before any privacy choice is made. GitHub receives the requested public
+repository name, IP address and browser user agent. Images allowed by the
+sanitizer can also be loaded from GitHub, GitHub's content hosts or shields.io;
+image requests are made without a referrer. The sanitized README is cached only
+in the current tab's `sessionStorage` and is not sent to this site's analytics.
+No third-party scripts or trackers are used.
 
 ## Where data goes
 

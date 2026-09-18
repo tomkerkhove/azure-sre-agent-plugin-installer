@@ -67,6 +67,9 @@ function loadTelemetry(connectionString, options = {}) {
       return Promise.resolve();
     },
     navigator: {},
+    addEventListener: (name, handler) => {
+      listeners[name] = handler;
+    },
     document: {
       title: "Install to Azure SRE Agent",
       addEventListener: (name, handler) => {
@@ -91,6 +94,7 @@ function loadTelemetry(connectionString, options = {}) {
     requests,
     localStorage,
     sessionStorage,
+    listeners,
     envelopes: () => requests.map((request) => JSON.parse(request.body)[0]),
   };
 }
@@ -158,6 +162,7 @@ describe("consent gating", () => {
   test("sends nothing before consent is given", () => {
     const { telemetry, requests } = loadTelemetry(VALID_CONNECTION_STRING);
     telemetry.trackEvent("BadgeGenerated");
+    telemetry.trackException(new Error("private error details"));
     telemetry.trackPageView({ scenario: "badge-generator" });
     telemetry.trackMetric("PluginInstalls", 1, { repository: "owner/repo" });
     expect(telemetry.isEnabled()).toBe(false);
@@ -206,6 +211,22 @@ describe("consent gating", () => {
     second.telemetry.trackEvent("BadgeGenerated");
     expect(second.telemetry.isEnabled()).toBe(true);
     expect(second.requests).toHaveLength(1);
+  });
+
+  test("requires renewed consent when the collected telemetry purpose changes", () => {
+    const localStorage = createStorage();
+    localStorage.setItem(
+      "sre-agent-plugin-installer.analytics-consent",
+      JSON.stringify({ version: 1, granted: true })
+    );
+
+    const { telemetry, requests } = loadTelemetry(VALID_CONNECTION_STRING, {
+      localStorage,
+    });
+    telemetry.trackException(new Error("private"));
+
+    expect(telemetry.isEnabled()).toBe(false);
+    expect(requests).toHaveLength(0);
   });
 
   test("does not store any cookie-like consent value when analytics are declined", () => {
@@ -270,10 +291,39 @@ describe("regional consent", () => {
   });
 
   test("requires consent for fixed-offset time zones", () => {
-    const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
-      timeZone: "+01:00",
-    });
-    expect(telemetry.isEnabled()).toBe(false);
+    for (const timeZone of ["+01:00", "+23", "-2359"]) {
+      const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+        timeZone,
+      });
+      expect(telemetry.isEnabled()).toBe(false);
+    }
+  });
+
+  test("requires consent for GMT and Etc time zones", () => {
+    for (const timeZone of ["GMT", "Etc/GMT", "Etc/GMT+1"]) {
+      const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+        timeZone,
+      });
+      expect(telemetry.isEnabled()).toBe(false);
+    }
+  });
+
+  test("requires consent for European aliases and malformed identifiers", () => {
+    for (const timeZone of ["CET", "EET", "WET", "GB", "Turkey", "invalid"]) {
+      const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+        timeZone,
+      });
+      expect(telemetry.isEnabled()).toBe(false);
+    }
+  });
+
+  test("recognizes non-European legacy aliases", () => {
+    for (const timeZone of ["US/Eastern", "Canada/Pacific", "Japan"]) {
+      const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
+        timeZone,
+      });
+      expect(telemetry.isEnabled()).toBe(true);
+    }
   });
 
   test("requires consent when time zone detection fails", () => {
@@ -287,7 +337,7 @@ describe("regional consent", () => {
     const localStorage = createStorage();
     localStorage.setItem(
       "sre-agent-plugin-installer.analytics-consent",
-      JSON.stringify({ version: 1, granted: false })
+      JSON.stringify({ version: 2, granted: false })
     );
 
     const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
@@ -323,6 +373,95 @@ describe("regional consent", () => {
       timeZone: "America/New_York",
     });
     expect(telemetry.isEnabled()).toBe(false);
+  });
+});
+
+describe("exception telemetry", () => {
+  test("sends an Application Insights exception without messages or stack traces", () => {
+    const { telemetry, requests, envelopes } = loadTelemetry(VALID_CONNECTION_STRING);
+    const error = new TypeError("token=private-value");
+    error.stack = "private stack trace";
+
+    telemetry.setConsent(true);
+    telemetry.trackException(error, { handled: true, operation: "install-plugin" });
+
+    const envelope = envelopes()[0];
+    expect(envelope.name).toBe(
+      "Microsoft.ApplicationInsights.11111111222233334444555555555555.Exception"
+    );
+    expect(envelope.data.baseType).toBe("ExceptionData");
+    expect(envelope.data.baseData.exceptions).toEqual([
+      {
+        id: 1,
+        outerId: 0,
+        typeName: "TypeError",
+        message: "An application exception occurred.",
+        hasFullStack: false,
+        stack: "Stack trace omitted for privacy.",
+        parsedStack: [],
+      },
+    ]);
+    expect(envelope.data.baseData.properties).toEqual({
+      handled: "true",
+      operation: "install-plugin",
+    });
+    expect(requests[0].body).not.toContain("private-value");
+    expect(requests[0].body).not.toContain("private stack trace");
+  });
+
+  test("normalizes custom exception names rather than sending arbitrary text", () => {
+    const { telemetry, envelopes } = loadTelemetry(VALID_CONNECTION_STRING);
+    telemetry.setConsent(true);
+    telemetry.trackException({ name: "CustomerAccount123", message: "private" });
+
+    expect(envelopes()[0].data.baseData.exceptions[0].typeName).toBe("Error");
+  });
+
+  test("only sends allowlisted exception context and values", () => {
+    const { telemetry, envelopes } = loadTelemetry(VALID_CONNECTION_STRING);
+    telemetry.setConsent(true);
+    telemetry.trackException(new Error("private"), {
+      handled: "yes",
+      operation: "account=private",
+      source: "https://private.example/path",
+      status: 999,
+      secret: "private-value",
+    });
+
+    expect(envelopes()[0].data.baseData.properties).toEqual({});
+  });
+
+  test("sends a valid API status with handled operation context", () => {
+    const { telemetry, envelopes } = loadTelemetry(VALID_CONNECTION_STRING);
+    telemetry.setConsent(true);
+    telemetry.trackException(new Error("private"), {
+      handled: true,
+      operation: "list-agents",
+      status: 503,
+    });
+
+    expect(envelopes()[0].data.baseData.properties).toEqual({
+      handled: "true",
+      operation: "list-agents",
+      status: "503",
+    });
+  });
+
+  test("captures unhandled errors and promise rejections after consent", () => {
+    const { telemetry, listeners, envelopes } = loadTelemetry(VALID_CONNECTION_STRING);
+    telemetry.setConsent(true);
+
+    listeners.error({ error: new ReferenceError("private error") });
+    listeners.unhandledrejection({ reason: new RangeError("private rejection") });
+
+    expect(envelopes()).toHaveLength(2);
+    expect(envelopes()[0].data.baseData.exceptions[0].typeName).toBe("ReferenceError");
+    expect(envelopes()[0].data.baseData.properties).toEqual({
+      handled: "false",
+      source: "window-error",
+    });
+    expect(envelopes()[1].data.baseData.exceptions[0].typeName).toBe("RangeError");
+    expect(envelopes()[1].data.baseData.properties.source).toBe("unhandled-rejection");
   });
 });
 

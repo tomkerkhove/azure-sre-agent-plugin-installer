@@ -7,11 +7,23 @@
 //
 // Reference: https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url
 
+// Resolving the dedicated install page's URL is shared with
+// assets/redirect-legacy.js via assets/install-page.js, which declares
+// `getInstallPageUrl` as a global for other same-page scripts to call
+// directly (all classic <script> tags share one top-level scope). In Node,
+// requiring it here has the side effect of attaching that same global so
+// this file's own use of `getInstallPageUrl` below, and its unit tests,
+// work the same way.
+if (typeof require === "function") {
+  require("./install-page.js");
+}
+
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
 const SRE_AGENT_API_DOCS_URL =
   "https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url#use-the-rest-api";
 const BADGE_IMAGE_URL =
   "https://img.shields.io/badge/Install-Azure%20SRE%20Agent-0078D4?logo=microsoftazure&logoColor=white";
+const GITHUB_API_URL = "https://api.github.com";
 const MANAGEMENT_SCOPE =
   "https://management.azure.com/user_impersonation";
 const RESOURCE_GRAPH_URL =
@@ -31,6 +43,57 @@ let authClient = null;
 let signedInAccount = null;
 const DEFAULT_THEME = "light";
 const SUPPORTED_THEMES = ["light", "dark"];
+const README_REQUEST_TIMEOUT_MS = 8000;
+const README_CACHE_PREFIX = "sre-agent-plugin-installer.readme.";
+const README_MAX_LENGTH = 500000;
+const README_ALLOWED_ELEMENTS = new Set([
+  "a",
+  "blockquote",
+  "br",
+  "code",
+  "del",
+  "details",
+  "div",
+  "em",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "hr",
+  "img",
+  "li",
+  "ol",
+  "p",
+  "pre",
+  "span",
+  "strong",
+  "sub",
+  "summary",
+  "sup",
+  "table",
+  "tbody",
+  "td",
+  "th",
+  "thead",
+  "tr",
+  "ul",
+]);
+const README_DISCARDED_ELEMENTS = new Set([
+  "button",
+  "embed",
+  "form",
+  "iframe",
+  "input",
+  "link",
+  "meta",
+  "object",
+  "script",
+  "style",
+  "svg",
+  "template",
+]);
 
 // `path` comes from the query string, so it is untrusted input: keep it to a
 // conservative subset of characters before it is rendered or reported.
@@ -46,6 +109,16 @@ function track(name, properties) {
   if (typeof window !== "undefined" && window.siteTelemetry) {
     window.siteTelemetry.trackEvent(name, properties);
   }
+}
+
+function trackException(error, properties) {
+  if (typeof window === "undefined" || !window.siteTelemetry) return;
+
+  const details = Object.assign({}, properties || {});
+  if (error && Number.isInteger(error.status)) {
+    details.status = error.status;
+  }
+  window.siteTelemetry.trackException(error, details);
 }
 
 // Custom metric so plugin installs can be counted and split per repository in
@@ -151,6 +224,225 @@ function escapeHtml(value) {
     "'": "&#039;",
   };
   return String(value).replace(/[&<>"']/g, (character) => characters[character]);
+}
+
+function buildRepositoryReadmeApiUrl(repo) {
+  const [owner, name] = repo.split("/");
+  return `${GITHUB_API_URL}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/readme`;
+}
+
+function getCachedRepositoryReadme(repo) {
+  try {
+    if (typeof window === "undefined" || !window.sessionStorage) return null;
+    const markup = window.sessionStorage.getItem(`${README_CACHE_PREFIX}${repo}`);
+    return markup && markup.length <= README_MAX_LENGTH ? markup : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function cacheRepositoryReadme(repo, markup) {
+  if (!markup || markup.length > README_MAX_LENGTH) return;
+
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      window.sessionStorage.setItem(`${README_CACHE_PREFIX}${repo}`, markup);
+    }
+  } catch (_error) {
+    // Continue without caching when browser storage is unavailable or full.
+  }
+}
+
+async function readResponseTextWithLimit(response, maximumLength) {
+  const contentLength = Number(response.headers?.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > maximumLength) {
+    throw new Error("README is too large");
+  }
+
+  if (!response.body || typeof response.body.getReader !== "function") {
+    const text = await response.text();
+    if (text.length > maximumLength) throw new Error("README is too large");
+    return text;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytesRead = 0;
+  let text = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      bytesRead += value.byteLength;
+      if (bytesRead > maximumLength) {
+        await reader.cancel();
+        throw new Error("README is too large");
+      }
+
+      text += decoder.decode(value, { stream: true });
+    }
+
+    text += decoder.decode();
+    if (text.length > maximumLength) throw new Error("README is too large");
+    return text;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function sanitizeRepositoryReadmeHtml(markup, repo) {
+  const template = document.createElement("template");
+  const repoUrl = `https://github.com/${repo}`;
+  const linkBaseUrl = `${repoUrl}/blob/HEAD/`;
+  const imageBaseUrl = `${repoUrl}/raw/HEAD/`;
+  template.innerHTML = markup;
+
+  Array.from(template.content.querySelectorAll("*")).forEach((element) => {
+    const tagName = element.tagName.toLowerCase();
+
+    if (README_DISCARDED_ELEMENTS.has(tagName)) {
+      element.remove();
+      return;
+    }
+
+    if (!README_ALLOWED_ELEMENTS.has(tagName)) {
+      element.replaceWith(...Array.from(element.childNodes));
+      return;
+    }
+
+    const href = element.getAttribute("href");
+    const src = element.getAttribute("src");
+    const alt = element.getAttribute("alt");
+    const title = element.getAttribute("title");
+    const width = element.getAttribute("width");
+    const height = element.getAttribute("height");
+    const colspan = element.getAttribute("colspan");
+    const rowspan = element.getAttribute("rowspan");
+    const isOpen = element.hasAttribute("open");
+
+    Array.from(element.attributes).forEach((attribute) => {
+      element.removeAttribute(attribute.name);
+    });
+
+    if (tagName === "a" && href) {
+      try {
+        const target = new URL(
+          href.startsWith("#") ? `${repoUrl}${href}` : href,
+          linkBaseUrl
+        );
+        if (target.protocol === "https:") {
+          element.setAttribute("href", target.toString());
+          element.setAttribute("target", "_blank");
+          element.setAttribute("rel", "noopener noreferrer");
+          if (title) element.setAttribute("title", title);
+        }
+      } catch (_error) {
+        // Leave malformed links as plain text.
+      }
+    }
+
+    if (tagName === "img") {
+      if (!src || !src.trim()) {
+        element.remove();
+        return;
+      }
+
+      let target;
+      try {
+        target = new URL(src, imageBaseUrl);
+      } catch (_error) {
+        element.remove();
+        return;
+      }
+
+      const isAllowedHost =
+        target.hostname === "github.com" ||
+        target.hostname === "img.shields.io" ||
+        target.hostname.endsWith(".githubusercontent.com");
+      if (target.protocol !== "https:" || !isAllowedHost) {
+        element.remove();
+        return;
+      }
+
+      element.setAttribute("src", target.toString());
+      element.setAttribute("alt", alt || "");
+      element.setAttribute("loading", "lazy");
+      element.setAttribute("referrerpolicy", "no-referrer");
+      if (title) element.setAttribute("title", title);
+      if (/^\d{1,4}$/.test(width || "")) element.setAttribute("width", width);
+      if (/^\d{1,4}$/.test(height || "")) element.setAttribute("height", height);
+    }
+
+    if (tagName === "details" && isOpen) element.setAttribute("open", "");
+    if (["td", "th"].includes(tagName)) {
+      if (/^\d{1,2}$/.test(colspan || "")) element.setAttribute("colspan", colspan);
+      if (/^\d{1,2}$/.test(rowspan || "")) element.setAttribute("rowspan", rowspan);
+    }
+  });
+
+  return template.innerHTML;
+}
+
+async function loadRepositoryReadme(repo) {
+  const content = document.getElementById("repository-readme-content");
+  const status = document.getElementById("repository-readme-status");
+  if (!content || !status) return;
+
+  const cachedMarkup = getCachedRepositoryReadme(repo);
+  if (cachedMarkup) {
+    const sanitizedMarkup = sanitizeRepositoryReadmeHtml(cachedMarkup, repo);
+    if (sanitizedMarkup.trim()) {
+      content.innerHTML = sanitizedMarkup;
+      content.hidden = false;
+      status.hidden = true;
+      return;
+    }
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    README_REQUEST_TIMEOUT_MS
+  );
+
+  try {
+    const response = await fetch(buildRepositoryReadmeApiUrl(repo), {
+      credentials: "omit",
+      headers: {
+        Accept: "application/vnd.github.html+json",
+      },
+      referrerPolicy: "no-referrer",
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error("README request failed");
+
+    const responseText = await readResponseTextWithLimit(
+      response,
+      README_MAX_LENGTH
+    );
+    const payload = JSON.parse(responseText);
+    if (!payload || typeof payload.content !== "string") {
+      throw new Error("README response is invalid");
+    }
+
+    const sanitizedMarkup = sanitizeRepositoryReadmeHtml(
+      payload.content,
+      repo
+    );
+    if (!sanitizedMarkup.trim()) throw new Error("README is empty");
+
+    content.innerHTML = sanitizedMarkup;
+    content.hidden = false;
+    status.hidden = true;
+    cacheRepositoryReadme(repo, sanitizedMarkup);
+  } catch (_error) {
+    status.textContent =
+      "The README preview is unavailable. View it on GitHub instead.";
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 function normalizeAgentEndpoint(rawEndpoint) {
@@ -543,12 +835,17 @@ function copyToClipboard(text) {
   document.body.appendChild(textarea);
   textarea.focus();
   textarea.select();
+  let copied = false;
   try {
-    document.execCommand("copy");
+    copied = document.execCommand("copy");
+  } catch (error) {
+    return Promise.reject(error);
   } finally {
     document.body.removeChild(textarea);
   }
-  return Promise.resolve();
+  return copied
+    ? Promise.resolve()
+    : Promise.reject(new Error("Clipboard copy failed"));
 }
 
 function initOnlineInstaller(repo, path) {
@@ -631,6 +928,7 @@ function initOnlineInstaller(repo, path) {
       );
     } catch (error) {
       alternatives.open = true;
+      trackException(error, { handled: true, operation: "list-agents" });
       setStatus(status, getFriendlyError(error, "list"), "error");
     } finally {
       signInBtn.disabled = false;
@@ -732,6 +1030,7 @@ function initOnlineInstaller(repo, path) {
       );
     } catch (error) {
       alternatives.open = true;
+      trackException(error, { handled: true, operation: "install-plugin" });
       setStatus(status, getFriendlyError(error, "install"), "error");
     } finally {
       installBtn.disabled = !canAttemptInstallation(agents[index]);
@@ -760,6 +1059,21 @@ function renderInstallCard(repo, path) {
           : ""
       }
     </dl>
+    <section class="repository-readme" aria-labelledby="repository-readme-heading">
+      <div class="repository-readme-header">
+        <h3 id="repository-readme-heading">Repository README</h3>
+        <a href="${repoUrl}" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+      </div>
+      <p id="repository-readme-status" class="hint" role="status">Loading README…</p>
+      <div
+        id="repository-readme-content"
+        class="repository-readme-content"
+        role="region"
+        aria-labelledby="repository-readme-heading"
+        tabindex="0"
+        hidden
+      ></div>
+    </section>
     <div class="online-installer">
       <h3>Choose an Azure SRE Agent</h3>
       <p>
@@ -837,6 +1151,7 @@ function renderInstallCard(repo, path) {
   `;
 
   initOnlineInstaller(repo, path);
+  loadRepositoryReadme(repo);
 
   const importForm = document.getElementById("api-import-form");
   const importOutput = document.getElementById("import-output");
@@ -866,17 +1181,21 @@ function renderInstallCard(repo, path) {
 
   copyImportBtn.addEventListener("click", () => {
     if (!importCommand) return;
-    copyToClipboard(importCommand).then(() =>
-      showToast("Import command copied to clipboard")
-    );
+    copyToClipboard(importCommand)
+      .then(() => showToast("Import command copied to clipboard"))
+      .catch(() => {});
   });
 
   const copyBtn = document.getElementById("copy-repo-btn");
   const portalLink = container.querySelector(`a[href="${SRE_AGENT_PORTAL_URL}"]`);
   copyBtn.addEventListener("click", () => {
-    copyToClipboard(repo).then(() => showToast("Repository copied to clipboard"));
-    track("PluginRepositoryCopied", { repository: repo, hasPath: Boolean(path) });
-    trackPluginInstall(repo, { hasPath: Boolean(path), step: "repository-copied" });
+    copyToClipboard(repo)
+      .then(() => {
+        showToast("Repository copied to clipboard");
+        track("PluginRepositoryCopied", { repository: repo, hasPath: Boolean(path) });
+        trackPluginInstall(repo, { hasPath: Boolean(path), step: "repository-copied" });
+      })
+      .catch(() => {});
   });
 
   portalLink.addEventListener("click", () => {
@@ -918,7 +1237,7 @@ function initGenerator() {
     }
 
     const installerUrl = buildInstallerUrl(
-      window.location.origin + window.location.pathname,
+      getInstallPageUrl(window.location.href),
       repo,
       pathInput,
       themeInput ? themeInput.value : DEFAULT_THEME
@@ -933,10 +1252,12 @@ function initGenerator() {
 
   document.getElementById("copy-badge-btn").addEventListener("click", () => {
     if (!output.textContent) return;
-    copyToClipboard(output.textContent).then(() =>
-      showToast("Badge markdown copied to clipboard")
-    );
-    track("BadgeMarkdownCopied");
+    copyToClipboard(output.textContent)
+      .then(() => {
+        showToast("Badge markdown copied to clipboard");
+        track("BadgeMarkdownCopied");
+      })
+      .catch(() => {});
   });
 }
 
@@ -977,6 +1298,14 @@ if (typeof module !== "undefined" && module.exports) {
     applyTheme,
     buildInstallerUrl,
     buildBadgeMarkdown,
+    buildRepositoryReadmeApiUrl,
+    sanitizeRepositoryReadmeHtml,
+    loadRepositoryReadme,
+    readResponseTextWithLimit,
+    README_REQUEST_TIMEOUT_MS,
+    README_MAX_LENGTH,
+    trackException,
+    copyToClipboard,
     DEFAULT_THEME,
     SUPPORTED_THEMES,
   };
