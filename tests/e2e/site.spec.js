@@ -488,6 +488,53 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
+  test("keeps the dark theme when using the site-nav links", async ({ page }) => {
+    await page.goto("/install.html?repo=owner/repo&theme=dark");
+
+    await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
+      "href",
+      "index.html?theme=dark"
+    );
+
+    await page.locator(".site-nav-link", { hasText: "Generate a badge" }).click();
+
+    await expect(page).toHaveURL(/\/index\.html\?theme=dark$/);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+    await expect(page.locator(".site-nav-link", { hasText: "Install a plugin" })).toHaveAttribute(
+      "href",
+      "install.html?theme=dark"
+    );
+
+    await page.locator(".site-nav-link", { hasText: "Install a plugin" }).click();
+
+    await expect(page).toHaveURL(/\/install\.html\?theme=dark$/);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+
+  test("updates the site-nav links after toggling the theme", async ({ page }) => {
+    await page.goto("/install.html?repo=owner/repo");
+
+    await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
+      "href",
+      "index.html"
+    );
+
+    await page.locator("#theme-toggle").click();
+
+    await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
+      "href",
+      "index.html?theme=dark"
+    );
+
+    await page.locator("#theme-toggle").click();
+
+    await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
+      "href",
+      "index.html"
+    );
+  });
+
   test("includes the selected theme in the generated badge markdown", async ({ page }) => {
     await page.goto("/");
 
