@@ -3,6 +3,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
+const themeInitSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "assets", "theme-init.js"),
+  "utf8"
+);
 const appSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "assets", "app.js"),
   "utf8"
@@ -29,6 +33,11 @@ function createContext(overrides = {}) {
     ...overrides,
   };
   vm.createContext(context);
+  // Mirrors the real page load order (see index.html/install.html):
+  // assets/theme-init.js runs first and exposes `window.ThemeInit`, which
+  // assets/app.js reads its shared theme constants and normalization logic
+  // from.
+  vm.runInContext(themeInitSource, context);
   vm.runInContext(appSource, context);
   return context;
 }

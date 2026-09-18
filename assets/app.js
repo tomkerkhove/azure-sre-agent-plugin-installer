@@ -16,8 +16,18 @@
 // work the same way.
 if (typeof require === "function") {
   require("./install-page.js");
-  require("./theme-init.js");
 }
+
+// The theme constants and normalization logic are shared with
+// assets/theme-init.js, which applies the `theme` query parameter to
+// `<html data-theme>` before this file loads (see index.html/install.html)
+// so the page never flashes the default light theme. That file keeps its
+// own declarations private and exposes them explicitly instead: as
+// `window.ThemeInit` in the browser, or as this require's return value in
+// Node, so this file always reads them from one clearly defined source
+// rather than relying on identifiers implicitly shared or mutated globals.
+const { DEFAULT_THEME, SUPPORTED_THEMES, normalizeTheme } =
+  typeof require === "function" ? require("./theme-init.js") : window.ThemeInit;
 
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
 const SRE_AGENT_API_DOCS_URL =
@@ -42,11 +52,6 @@ Resources
 
 let authClient = null;
 let signedInAccount = null;
-// DEFAULT_THEME, SUPPORTED_THEMES and normalizeTheme are declared in
-// assets/theme-init.js, which runs first (see index.html/install.html) so
-// the requested theme is applied before this file's DOMContentLoaded
-// handler runs. Classic <script> tags share one top-level scope in the
-// browser; the require() above attaches the same globals in Node.
 const README_REQUEST_TIMEOUT_MS = 8000;
 const README_CACHE_PREFIX = "sre-agent-plugin-installer.readme.";
 const README_MAX_LENGTH = 500000;
