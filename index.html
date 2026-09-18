@@ -2,6 +2,12 @@
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
+  <!--
+    Applies the `theme` query parameter before the stylesheet loads, so the
+    page never flashes from light to the requested theme. Must stay the
+    first script in <head>, ahead of the stylesheet and assets/app.js.
+  -->
+  <script src="assets/theme-init.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta
     http-equiv="Content-Security-Policy"

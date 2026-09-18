@@ -325,6 +325,23 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   });
 
+  test("applies the dark theme before the page finishes loading, avoiding a flash of the light theme", async ({
+    page,
+  }) => {
+    // `waitUntil: "commit"` returns as soon as navigation commits, without
+    // waiting for the stylesheet, images or assets/app.js to load. Without
+    // assets/theme-init.js applying the theme synchronously up front, the
+    // page would still show the default `light` theme baked into the
+    // markup at this point, only switching to `dark` later once
+    // assets/app.js runs on `DOMContentLoaded` - which is the flash this
+    // guards against.
+    await page.goto("/install.html?repo=owner/repo&theme=dark", {
+      waitUntil: "commit",
+    });
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+
   test("toggles the page theme and preserves the selection in the URL", async ({ page }) => {
     await page.goto("/install.html?repo=owner/repo");
 

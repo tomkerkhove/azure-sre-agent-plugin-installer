@@ -16,6 +16,7 @@
 // work the same way.
 if (typeof require === "function") {
   require("./install-page.js");
+  require("./theme-init.js");
 }
 
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
@@ -41,8 +42,11 @@ Resources
 
 let authClient = null;
 let signedInAccount = null;
-const DEFAULT_THEME = "light";
-const SUPPORTED_THEMES = ["light", "dark"];
+// DEFAULT_THEME, SUPPORTED_THEMES and normalizeTheme are declared in
+// assets/theme-init.js, which runs first (see index.html/install.html) so
+// the requested theme is applied before this file's DOMContentLoaded
+// handler runs. Classic <script> tags share one top-level scope in the
+// browser; the require() above attaches the same globals in Node.
 const README_REQUEST_TIMEOUT_MS = 8000;
 const README_CACHE_PREFIX = "sre-agent-plugin-installer.readme.";
 const README_MAX_LENGTH = 500000;
@@ -152,13 +156,6 @@ function normalizeRepo(rawRepo) {
   }
 
   return repo;
-}
-
-function normalizeTheme(rawTheme) {
-  if (typeof rawTheme !== "string") return DEFAULT_THEME;
-
-  const theme = rawTheme.trim().toLowerCase();
-  return SUPPORTED_THEMES.includes(theme) ? theme : DEFAULT_THEME;
 }
 
 function buildInstallerUrl(baseUrl, repo, path, theme) {
