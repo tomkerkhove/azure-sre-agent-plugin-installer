@@ -1,5 +1,18 @@
 const { test, expect } = require("@playwright/test");
 
+async function expectThemeToggleState(toggle, theme) {
+  if (theme === "dark") {
+    await expect(toggle).toHaveAccessibleName("Switch to light theme");
+    await expect(toggle.locator(".theme-icon-moon")).toBeHidden();
+    await expect(toggle.locator(".theme-icon-sun")).toBeVisible();
+    return;
+  }
+
+  await expect(toggle).toHaveAccessibleName("Switch to dark theme");
+  await expect(toggle.locator(".theme-icon-moon")).toBeVisible();
+  await expect(toggle.locator(".theme-icon-sun")).toBeHidden();
+}
+
 test.describe("Install to Azure SRE Agent site", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("https://api.github.com/**", async (route) => {
@@ -394,16 +407,12 @@ test.describe("Install to Azure SRE Agent site", () => {
 
     const toggle = page.locator("#theme-toggle");
     await expect(page.locator("footer #theme-toggle")).toBeVisible();
-    await expect(toggle).toHaveAccessibleName("Switch to dark theme");
-    await expect(toggle.locator(".theme-icon-moon")).toBeVisible();
-    await expect(toggle.locator(".theme-icon-sun")).toBeHidden();
+    await expectThemeToggleState(toggle, "light");
 
     await toggle.click();
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(toggle).toHaveAccessibleName("Switch to light theme");
-    await expect(toggle.locator(".theme-icon-moon")).toBeHidden();
-    await expect(toggle.locator(".theme-icon-sun")).toBeVisible();
+    await expectThemeToggleState(toggle, "dark");
     await expect(page).toHaveURL(/repo=owner%2Frepo&theme=dark$/);
 
     await toggle.click();
@@ -417,15 +426,18 @@ test.describe("Install to Azure SRE Agent site", () => {
 
     const toggle = page.locator("#theme-toggle");
     await expect(page.locator("footer #theme-toggle")).toBeVisible();
+    await expectThemeToggleState(toggle, "light");
 
     await toggle.click();
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expectThemeToggleState(toggle, "dark");
     await expect(page).toHaveURL(/\?theme=dark$/);
 
     await toggle.click();
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expectThemeToggleState(toggle, "light");
     await expect(page).toHaveURL(/\/$/);
   });
 
