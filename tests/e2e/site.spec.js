@@ -455,7 +455,7 @@ test.describe("Install to Azure SRE Agent site", () => {
 
     await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
       "href",
-      "/index.html?theme=dark"
+      "index.html?theme=dark"
     );
 
     await page.locator(".site-nav-link", { hasText: "Generate a badge" }).click();
@@ -465,7 +465,7 @@ test.describe("Install to Azure SRE Agent site", () => {
 
     await expect(page.locator(".site-nav-link", { hasText: "Install a plugin" })).toHaveAttribute(
       "href",
-      "/install.html?theme=dark"
+      "install.html?theme=dark"
     );
 
     await page.locator(".site-nav-link", { hasText: "Install a plugin" }).click();
@@ -479,14 +479,21 @@ test.describe("Install to Azure SRE Agent site", () => {
 
     await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
       "href",
-      "/index.html"
+      "index.html"
     );
 
     await page.locator("#theme-toggle").click();
 
     await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
       "href",
-      "/index.html?theme=dark"
+      "index.html?theme=dark"
+    );
+
+    await page.locator("#theme-toggle").click();
+
+    await expect(page.locator(".site-nav-link", { hasText: "Generate a badge" })).toHaveAttribute(
+      "href",
+      "index.html"
     );
   });
 
