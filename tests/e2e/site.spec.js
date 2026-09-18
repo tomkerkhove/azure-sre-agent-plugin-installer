@@ -369,6 +369,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     }) => {
       await page.goto(url);
 
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       const toggle = page.locator("footer #theme-toggle");
       await expect(toggle).toBeVisible();
       await expectThemeToggleState(toggle, theme);
