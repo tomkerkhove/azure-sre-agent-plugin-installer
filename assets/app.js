@@ -1266,7 +1266,15 @@ function clearFieldErrors(inputs, errorElement) {
   inputs.forEach((input) => {
     if (!input) return;
     input.removeAttribute("aria-invalid");
-    input.removeAttribute("aria-describedby");
+    // Only drop the description this helper added, so any other description
+    // (for example a hint) stays associated with the field.
+    if (
+      errorElement &&
+      errorElement.id &&
+      input.getAttribute("aria-describedby") === errorElement.id
+    ) {
+      input.removeAttribute("aria-describedby");
+    }
   });
   if (errorElement) {
     errorElement.textContent = "";

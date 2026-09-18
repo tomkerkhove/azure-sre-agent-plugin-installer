@@ -96,4 +96,18 @@ describe("manual plugin details form", () => {
     expect(repoField.hasAttribute("aria-describedby")).toBe(false);
     expect(document.getElementById("plugin-details-error").hidden).toBe(true);
   });
+
+  test("keeps unrelated descriptions on the field", () => {
+    setUpForm();
+    const pathField = document.getElementById("plugin-path");
+    pathField.setAttribute("aria-describedby", "plugin-path-hint");
+    document.getElementById("plugin-repo").value = "owner/repo";
+    pathField.value = "plugins/my-plugin";
+
+    document
+      .getElementById("plugin-details-form")
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(pathField.getAttribute("aria-describedby")).toBe("plugin-path-hint");
+  });
 });
