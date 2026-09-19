@@ -302,6 +302,41 @@ test.describe("Privacy consent", () => {
     expect(event.data.baseData.properties.hasPath).toBe("true");
   });
 
+  test("reports opening Azure API Center with the repository name", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+
+    await page.goto("/install.html?repo=owner/repo");
+    await page.locator("#consent-accept").click();
+    await openApiCenterInstallOption(page);
+
+    const popupPromise = page.waitForEvent("popup");
+    await page
+      .locator("#api-center-install-option a", {
+        hasText: "Open Azure API Center",
+      })
+      .click();
+    const popup = await popupPromise;
+    await popup.close();
+
+    await expect
+      .poll(
+        () =>
+          envelopes(ingestionRequests).find(
+            (envelope) =>
+              envelope.data.baseType === "EventData" &&
+              envelope.data.baseData.name === "AzureApiCenterOpened"
+          ),
+        { timeout: 5000 }
+      )
+      .toBeTruthy();
+
+    const event = envelopes(ingestionRequests).find(
+      (envelope) => envelope.data.baseData.name === "AzureApiCenterOpened"
+    );
+    expect(event.data.baseData.properties.repository).toBe("owner/repo");
+  });
+
   test("reports error categories without exception details", async ({ page }) => {
     const ingestionRequests = [];
     await enableTelemetry(page, ingestionRequests);
