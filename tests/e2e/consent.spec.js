@@ -103,6 +103,12 @@ async function openApiCenterInstallOption(page) {
   await page.locator("#api-center-install-option summary").click();
 }
 
+async function chooseApiCenterAssetType(page, assetType) {
+  await page
+    .locator(`#api-center-install-option input[value="${assetType}"]`)
+    .check();
+}
+
 test.describe("Privacy consent", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("https://api.github.com/**", async (route) => {
@@ -281,6 +287,7 @@ test.describe("Privacy consent", () => {
     await page.goto("/install.html?repo=owner/repo&path=plugins/my-plugin");
     await page.locator("#consent-accept").click();
     await openApiCenterInstallOption(page);
+    await chooseApiCenterAssetType(page, "api");
     await page.locator("#copy-api-center-source-btn").click();
 
     await expect
@@ -309,6 +316,7 @@ test.describe("Privacy consent", () => {
     await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
     await openApiCenterInstallOption(page);
+    await chooseApiCenterAssetType(page, "api");
 
     const popupPromise = page.waitForEvent("popup");
     await page
@@ -551,6 +559,7 @@ test.describe("Privacy consent", () => {
     await page.goto("/install.html?repo=owner/repo");
     await page.locator("#consent-accept").click();
     await openApiCenterInstallOption(page);
+    await chooseApiCenterAssetType(page, "api");
     await page.locator("#copy-api-center-source-btn").click();
     await page.waitForTimeout(250);
 

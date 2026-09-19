@@ -154,14 +154,22 @@ test.describe("Install to Azure SRE Agent site", () => {
 
     const option = page.locator("#api-center-install-option");
     await expect(option).toBeVisible();
-    await expect(option).toContainText("Inventory > Assets");
-    await expect(option).toContainText("Register an asset > API");
-    await expect(option).toContainText("Register an asset > MCP server");
-    await expect(option).toContainText(
-      "Add the OpenAPI definition to the API asset"
+    await expect(page.locator("#api-center-selection-hint")).toBeVisible();
+    await expect(page.locator("#api-center-registration-guidance")).toBeHidden();
+
+    await option.locator('input[value="api"]').check();
+    await expect(page.locator("#api-center-selection-hint")).toBeHidden();
+    await expect(page.locator("#api-center-registration-guidance")).toBeVisible();
+    await expect(page.locator("#api-center-api-steps")).toBeVisible();
+    await expect(page.locator("#api-center-mcp-steps")).toBeHidden();
+    await expect(page.locator("#api-center-api-steps")).toContainText(
+      "Inventory > Assets"
     );
-    await expect(option).toContainText(
-      "add the MCP server endpoint to the MCP server asset"
+    await expect(page.locator("#api-center-api-steps")).toContainText(
+      "Register an asset > API"
+    );
+    await expect(page.locator("#api-center-api-steps")).toContainText(
+      "Add the plugin's OpenAPI definition to the API asset"
     );
     await expect(page.locator("#api-center-source-value")).toHaveValue(
       "https://github.com/owner/repo"
@@ -174,6 +182,19 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(option.locator("a", { hasText: "API guidance" })).toHaveAttribute(
       "href",
       "https://learn.microsoft.com/en-us/azure/api-center/tutorials/register-apis"
+    );
+    await expect(
+      option.locator("a", { hasText: "MCP server guidance" })
+    ).toBeHidden();
+
+    await option.locator('input[value="mcp"]').check();
+    await expect(page.locator("#api-center-api-steps")).toBeHidden();
+    await expect(page.locator("#api-center-mcp-steps")).toBeVisible();
+    await expect(page.locator("#api-center-mcp-steps")).toContainText(
+      "Register an asset > MCP server"
+    );
+    await expect(page.locator("#api-center-mcp-steps")).toContainText(
+      "Add the plugin's MCP server endpoint to the MCP server asset"
     );
     await expect(
       option.locator("a", { hasText: "MCP server guidance" })
@@ -347,6 +368,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.goto("/install.html?repo=owner/repo");
     await page.locator("#api-center-install-option summary").click();
+    await page.locator('#api-center-install-option input[value="api"]').check();
 
     await page.locator("#copy-api-center-source-btn").click();
 

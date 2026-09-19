@@ -1210,38 +1210,53 @@ function renderInstallCard(repo, path) {
         If this plugin exposes an API or MCP server, register it in Azure API Center
         so teams can discover and govern it from their existing API inventory.
       </p>
-      <ol class="steps">
-        <li>Open your <strong>Azure API Center</strong> resource in the Azure portal.</li>
-        <li>
-          For an API plugin, go to <strong>Inventory &gt; Assets</strong>, then
-          choose <strong>Register an asset &gt; API</strong>.
-        </li>
-        <li>
-          For an MCP plugin, go to <strong>Inventory &gt; Assets</strong>, then
-          choose <strong>Register an asset &gt; MCP server</strong> instead.
-        </li>
-        <li>Use the plugin source below as a documentation link or metadata value.</li>
-        <li>Add the OpenAPI definition to the API asset, or add the MCP server endpoint to the MCP server asset.</li>
-      </ol>
-      <div class="copy-row">
-        <input
-          id="api-center-source-value"
-          type="text"
-          value="${repoUrl}"
-          aria-label="Plugin source URL to use in Azure API Center"
-          readonly
-        />
-        <button id="copy-api-center-source-btn" type="button" aria-label="Copy plugin source URL">Copy</button>
-      </div>
-      ${
-        path
-          ? `<p class="hint">Plugin path: <code>${safePath}</code></p>`
-          : ""
-      }
-      <div class="actions">
-        <a class="btn" href="${API_CENTER_PORTAL_URL}" target="_blank" rel="noopener noreferrer">Open Azure API Center</a>
-        <a class="btn secondary" href="${API_CENTER_DOCS_URL}" target="_blank" rel="noopener noreferrer">API guidance</a>
-        <a class="btn secondary" href="${API_CENTER_MCP_DOCS_URL}" target="_blank" rel="noopener noreferrer">MCP server guidance</a>
+      <fieldset class="choice-group">
+        <legend>What does this plugin expose?</legend>
+        <label>
+          <input type="radio" name="api-center-asset-type" value="api" />
+          API or OpenAPI definition
+        </label>
+        <label>
+          <input type="radio" name="api-center-asset-type" value="mcp" />
+          MCP server endpoint
+        </label>
+      </fieldset>
+      <p id="api-center-selection-hint" class="hint">
+        Choose the asset type to show the matching Azure API Center registration steps.
+      </p>
+      <div id="api-center-registration-guidance" hidden>
+        <ol class="steps" id="api-center-api-steps" hidden>
+          <li>Open your <strong>Azure API Center</strong> resource in the Azure portal.</li>
+          <li>Go to <strong>Inventory &gt; Assets</strong>, then choose <strong>Register an asset &gt; API</strong>.</li>
+          <li>Use the plugin source below as a documentation link or metadata value.</li>
+          <li>Add the plugin's OpenAPI definition to the API asset.</li>
+        </ol>
+        <ol class="steps" id="api-center-mcp-steps" hidden>
+          <li>Open your <strong>Azure API Center</strong> resource in the Azure portal.</li>
+          <li>Go to <strong>Inventory &gt; Assets</strong>, then choose <strong>Register an asset &gt; MCP server</strong>.</li>
+          <li>Use the plugin source below as a documentation link or metadata value.</li>
+          <li>Add the plugin's MCP server endpoint to the MCP server asset.</li>
+        </ol>
+        <div class="copy-row">
+          <input
+            id="api-center-source-value"
+            type="text"
+            value="${repoUrl}"
+            aria-label="Plugin source URL to use in Azure API Center"
+            readonly
+          />
+          <button id="copy-api-center-source-btn" type="button" aria-label="Copy plugin source URL">Copy</button>
+        </div>
+        ${
+          path
+            ? `<p class="hint">Plugin path: <code>${safePath}</code></p>`
+            : ""
+        }
+        <div class="actions">
+          <a class="btn" href="${API_CENTER_PORTAL_URL}" target="_blank" rel="noopener noreferrer">Open Azure API Center</a>
+          <a class="btn secondary" id="api-center-api-docs-link" href="${API_CENTER_DOCS_URL}" target="_blank" rel="noopener noreferrer" hidden>API guidance</a>
+          <a class="btn secondary" id="api-center-mcp-docs-link" href="${API_CENTER_MCP_DOCS_URL}" target="_blank" rel="noopener noreferrer" hidden>MCP server guidance</a>
+        </div>
       </div>
     </details>
     <details class="installation-option" id="cli-install-option">
@@ -1323,6 +1338,37 @@ function renderInstallCard(repo, path) {
 
   portalLink.addEventListener("click", () => {
     track("AzureSreAgentOpened", { repository: repo });
+  });
+
+  const apiCenterAssetTypeInputs = Array.from(
+    container.querySelectorAll('input[name="api-center-asset-type"]')
+  );
+  const apiCenterGuidance = document.getElementById(
+    "api-center-registration-guidance"
+  );
+  const apiCenterSelectionHint = document.getElementById(
+    "api-center-selection-hint"
+  );
+  const apiCenterApiSteps = document.getElementById("api-center-api-steps");
+  const apiCenterMcpSteps = document.getElementById("api-center-mcp-steps");
+  const apiCenterApiDocsLink = document.getElementById(
+    "api-center-api-docs-link"
+  );
+  const apiCenterMcpDocsLink = document.getElementById(
+    "api-center-mcp-docs-link"
+  );
+  function showApiCenterRegistration(assetType) {
+    const isApi = assetType === "api";
+    const isMcp = assetType === "mcp";
+    apiCenterGuidance.hidden = !isApi && !isMcp;
+    apiCenterSelectionHint.hidden = isApi || isMcp;
+    apiCenterApiSteps.hidden = !isApi;
+    apiCenterMcpSteps.hidden = !isMcp;
+    apiCenterApiDocsLink.hidden = !isApi;
+    apiCenterMcpDocsLink.hidden = !isMcp;
+  }
+  apiCenterAssetTypeInputs.forEach((input) => {
+    input.addEventListener("change", () => showApiCenterRegistration(input.value));
   });
 
   const copyApiCenterSourceBtn = document.getElementById(
