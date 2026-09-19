@@ -157,6 +157,12 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(option).toContainText("Inventory > Assets");
     await expect(option).toContainText("Register an asset > API");
     await expect(option).toContainText("Register an asset > MCP server");
+    await expect(option).toContainText(
+      "Add the OpenAPI definition to the API asset"
+    );
+    await expect(option).toContainText(
+      "add the MCP server endpoint to the MCP server asset"
+    );
     await expect(page.locator("#api-center-source-value")).toHaveValue(
       "https://github.com/owner/repo"
     );
@@ -164,6 +170,16 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(option.locator("a", { hasText: "Open Azure API Center" })).toHaveAttribute(
       "href",
       "https://portal.azure.com/#browse/Microsoft.ApiCenter%2Fservices"
+    );
+    await expect(option.locator("a", { hasText: "API guidance" })).toHaveAttribute(
+      "href",
+      "https://learn.microsoft.com/en-us/azure/api-center/tutorials/register-apis"
+    );
+    await expect(
+      option.locator("a", { hasText: "MCP server guidance" })
+    ).toHaveAttribute(
+      "href",
+      "https://learn.microsoft.com/en-us/azure/api-center/register-discover-mcp-server"
     );
   });
 

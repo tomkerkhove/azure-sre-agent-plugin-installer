@@ -39,6 +39,8 @@ const API_CENTER_PORTAL_URL =
   "https://portal.azure.com/#browse/Microsoft.ApiCenter%2Fservices";
 const API_CENTER_DOCS_URL =
   "https://learn.microsoft.com/en-us/azure/api-center/tutorials/register-apis";
+const API_CENTER_MCP_DOCS_URL =
+  "https://learn.microsoft.com/en-us/azure/api-center/register-discover-mcp-server";
 const SRE_AGENT_API_DOCS_URL =
   "https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url#use-the-rest-api";
 const BADGE_IMAGE_URL =
@@ -1211,12 +1213,15 @@ function renderInstallCard(repo, path) {
       <ol class="steps">
         <li>Open your <strong>Azure API Center</strong> resource in the Azure portal.</li>
         <li>
-          Go to <strong>Inventory &gt; Assets</strong>, then choose
-          <strong>Register an asset &gt; API</strong> for an API plugin or
-          <strong>Register an asset &gt; MCP server</strong> for an MCP plugin.
+          For an API plugin, go to <strong>Inventory &gt; Assets</strong>, then
+          choose <strong>Register an asset &gt; API</strong>.
+        </li>
+        <li>
+          For an MCP plugin, go to <strong>Inventory &gt; Assets</strong>, then
+          choose <strong>Register an asset &gt; MCP server</strong> instead.
         </li>
         <li>Use the plugin source below as a documentation link or metadata value.</li>
-        <li>If the plugin exposes an OpenAPI definition or MCP server endpoint, add it to the API Center asset.</li>
+        <li>Add the OpenAPI definition to the API asset, or add the MCP server endpoint to the MCP server asset.</li>
       </ol>
       <div class="copy-row">
         <input
@@ -1235,7 +1240,8 @@ function renderInstallCard(repo, path) {
       }
       <div class="actions">
         <a class="btn" href="${API_CENTER_PORTAL_URL}" target="_blank" rel="noopener noreferrer">Open Azure API Center</a>
-        <a class="btn secondary" href="${API_CENTER_DOCS_URL}" target="_blank" rel="noopener noreferrer">Registration guidance</a>
+        <a class="btn secondary" href="${API_CENTER_DOCS_URL}" target="_blank" rel="noopener noreferrer">API guidance</a>
+        <a class="btn secondary" href="${API_CENTER_MCP_DOCS_URL}" target="_blank" rel="noopener noreferrer">MCP server guidance</a>
       </div>
     </details>
     <details class="installation-option" id="cli-install-option">
