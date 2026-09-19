@@ -47,6 +47,9 @@ When someone clicks the badge, they land on the install page that:
 4. Provides the official
    [Install from URL](https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url)
    flow and a generated Azure CLI command as alternatives.
+5. Offers a portal-first Azure API Center registration path for plugins that
+   expose an API or MCP server and should be discoverable in an organization's
+   API inventory.
 
 > Badges generated before this site had separate landing and install pages
 > point at the landing page with a `repo` query parameter. The landing page
@@ -121,6 +124,9 @@ Azure CLI and portal alternatives.
   for an installation request.
 * The Azure CLI fallback gets a short-lived token from the visitor's local CLI
   session; the site never receives it.
+* The Azure API Center option keeps registration in the Azure portal. It links
+  to the visitor's API Center resources and provides the plugin source details
+  to copy into an API Center asset.
 * [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml)
   publishes the site to GitHub Pages on every push to `main` or on demand.
 

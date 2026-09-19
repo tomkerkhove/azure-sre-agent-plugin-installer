@@ -129,10 +129,11 @@ test.describe("Install to Azure SRE Agent site", () => {
     await page.goto("/install.html?repo=owner/repo");
 
     const installationOptions = page.locator("#install-card > details");
-    await expect(installationOptions).toHaveCount(3);
+    await expect(installationOptions).toHaveCount(4);
     await expect(installationOptions.locator("summary")).toHaveText([
       "Choose an Azure SRE Agent",
       "Install in the Azure portal",
+      "Register in Azure API Center",
       "Generate an Azure CLI command",
     ]);
     await expect(page.getByText("Other installation options")).toHaveCount(0);
@@ -142,8 +143,27 @@ test.describe("Install to Azure SRE Agent site", () => {
     );
     await expect(page.locator("#agent-install-option")).toHaveAttribute("open", "");
     await expect(page.locator("#portal-install-option")).not.toHaveAttribute("open", "");
+    await expect(page.locator("#api-center-install-option")).not.toHaveAttribute("open", "");
     await expect(page.locator("#cli-install-option")).not.toHaveAttribute("open", "");
     await expect(page.locator("#api-import-form")).toBeHidden();
+  });
+
+  test("shows Azure API Center portal registration guidance", async ({ page }) => {
+    await page.goto("/install.html?repo=owner/repo&path=plugins/my-plugin");
+    await page.locator("#api-center-install-option summary").click();
+
+    const option = page.locator("#api-center-install-option");
+    await expect(option).toBeVisible();
+    await expect(option).toContainText("Inventory > Assets");
+    await expect(option).toContainText("Register an asset > API");
+    await expect(page.locator("#api-center-source-value")).toHaveValue(
+      "https://github.com/owner/repo"
+    );
+    await expect(option.locator("code")).toHaveText("plugins/my-plugin");
+    await expect(option.locator("a", { hasText: "Open Azure API Center" })).toHaveAttribute(
+      "href",
+      "https://portal.azure.com/#browse/Microsoft.ApiCenter%2Fservices"
+    );
   });
 
   test("generates an Azure CLI import command", async ({ page }) => {
@@ -304,6 +324,18 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(page.locator("#toast")).toHaveClass(/visible/);
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
     expect(clipboardText).toBe("owner/repo");
+  });
+
+  test("copies the plugin source URL for Azure API Center", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.goto("/install.html?repo=owner/repo");
+    await page.locator("#api-center-install-option summary").click();
+
+    await page.locator("#copy-api-center-source-btn").click();
+
+    await expect(page.locator("#toast")).toHaveClass(/visible/);
+    const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboardText).toBe("https://github.com/owner/repo");
   });
 
   test("generates badge markdown from the generator form", async ({ page }) => {

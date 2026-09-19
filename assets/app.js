@@ -35,6 +35,10 @@ if (!themeInit) {
 const { DEFAULT_THEME, SUPPORTED_THEMES, normalizeTheme } = themeInit;
 
 const SRE_AGENT_PORTAL_URL = "https://aka.ms/sreagent";
+const API_CENTER_PORTAL_URL =
+  "https://portal.azure.com/#browse/Microsoft.ApiCenter%2Fservices";
+const API_CENTER_DOCS_URL =
+  "https://learn.microsoft.com/en-us/azure/api-center/tutorials/register-apis";
 const SRE_AGENT_API_DOCS_URL =
   "https://learn.microsoft.com/en-us/azure/sre-agent/install-plugin-from-url#use-the-rest-api";
 const BADGE_IMAGE_URL =
@@ -1198,6 +1202,38 @@ function renderInstallCard(repo, path) {
         <a class="btn secondary" href="${repoUrl}" target="_blank" rel="noopener noreferrer">View plugin source</a>
       </div>
     </details>
+    <details class="installation-option" id="api-center-install-option">
+      <summary>Register in Azure API Center</summary>
+      <p>
+        If this plugin exposes an API or MCP server, register it in Azure API Center
+        so teams can discover and govern it from their existing API inventory.
+      </p>
+      <ol class="steps">
+        <li>Open your <strong>Azure API Center</strong> resource in the Azure portal.</li>
+        <li>Go to <strong>Inventory &gt; Assets</strong>, then choose <strong>Register an asset &gt; API</strong>.</li>
+        <li>Use the plugin source below as a documentation link or metadata value.</li>
+        <li>If the plugin exposes an OpenAPI definition or MCP server endpoint, add it to the API Center asset.</li>
+      </ol>
+      <div class="copy-row">
+        <input
+          id="api-center-source-value"
+          type="text"
+          value="${repoUrl}"
+          aria-label="Plugin source URL to use in Azure API Center"
+          readonly
+        />
+        <button id="copy-api-center-source-btn" type="button" aria-label="Copy plugin source URL">Copy</button>
+      </div>
+      ${
+        path
+          ? `<p class="hint">Plugin path: <code>${safePath}</code></p>`
+          : ""
+      }
+      <div class="actions">
+        <a class="btn" href="${API_CENTER_PORTAL_URL}" target="_blank" rel="noopener noreferrer">Open Azure API Center</a>
+        <a class="btn secondary" href="${API_CENTER_DOCS_URL}" target="_blank" rel="noopener noreferrer">Registration guidance</a>
+      </div>
+    </details>
     <details class="installation-option" id="cli-install-option">
       <summary>Generate an Azure CLI command</summary>
       <p>
@@ -1277,6 +1313,28 @@ function renderInstallCard(repo, path) {
 
   portalLink.addEventListener("click", () => {
     track("AzureSreAgentOpened", { repository: repo });
+  });
+
+  const copyApiCenterSourceBtn = document.getElementById(
+    "copy-api-center-source-btn"
+  );
+  const apiCenterPortalLink = container.querySelector(
+    `a[href="${API_CENTER_PORTAL_URL}"]`
+  );
+  copyApiCenterSourceBtn.addEventListener("click", () => {
+    copyToClipboard(repoUrl)
+      .then(() => {
+        showToast("Plugin source URL copied to clipboard");
+        track("ApiCenterSourceCopied", {
+          repository: repo,
+          hasPath: Boolean(path),
+        });
+      })
+      .catch(() => {});
+  });
+
+  apiCenterPortalLink.addEventListener("click", () => {
+    track("AzureApiCenterOpened", { repository: repo });
   });
 
   container.hidden = false;
