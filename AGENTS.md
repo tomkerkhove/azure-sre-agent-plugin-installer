@@ -30,7 +30,8 @@ Before asking the user to review a pull request:
 * Re-run the required tests after the merge.
 * Verify that GitHub no longer reports the pull request as conflicting.
 * Wait for Copilot's review to finish. Address all actionable feedback, push
-  the fixes, and repeat until Copilot review passes with no unresolved feedback.
+  the fixes, request or wait for a new review, and repeat this cycle until
+  Copilot explicitly signs off with no unresolved feedback.
 * Only then ask the user to review the published pull request. Do not report the
   work as complete or request review while conflicts or Copilot feedback remain.
 
