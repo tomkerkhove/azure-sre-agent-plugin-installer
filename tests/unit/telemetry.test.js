@@ -229,7 +229,7 @@ describe("consent gating", () => {
     localStorage.setItem(
       "sre-agent-plugin-installer.analytics-consent",
       JSON.stringify({
-        version: 2,
+        version: 3,
         granted: true,
         decidedAt: "2026-01-01T00:00:00.000Z",
       })
@@ -243,7 +243,7 @@ describe("consent gating", () => {
     localStorage.setItem(
       "sre-agent-plugin-installer.analytics-consent",
       JSON.stringify({
-        version: 2,
+        version: 3,
         granted: false,
         decidedAt: "2026-01-02T00:00:00.000Z",
       })
@@ -263,7 +263,7 @@ describe("consent gating", () => {
     backingStorage.setItem(
       "sre-agent-plugin-installer.analytics-consent",
       JSON.stringify({
-        version: 2,
+        version: 3,
         granted: true,
         decidedAt: "2026-01-01T00:00:00.000Z",
       })
@@ -308,7 +308,7 @@ describe("consent gating", () => {
 
     BroadcastChannel.channels[1].onmessage({
       data: {
-        version: 2,
+        version: 3,
         consent: "granted",
         decidedAt: "2026-01-01T00:00:00.000Z",
       },
@@ -347,7 +347,7 @@ describe("consent gating", () => {
     const localStorage = createStorage();
     localStorage.setItem(
       "sre-agent-plugin-installer.analytics-consent",
-      JSON.stringify({ version: 1, granted: true })
+      JSON.stringify({ version: 2, granted: true })
     );
 
     const { telemetry, requests } = loadTelemetry(VALID_CONNECTION_STRING, {
@@ -364,7 +364,7 @@ describe("consent gating", () => {
       const localStorage = createStorage();
       localStorage.setItem(
         "sre-agent-plugin-installer.analytics-consent",
-        JSON.stringify({ version: 1, granted })
+        JSON.stringify({ version: 2, granted })
       );
 
       const { telemetry, requests } = loadTelemetry(VALID_CONNECTION_STRING, {
@@ -396,7 +396,7 @@ describe("consent gating", () => {
     localStorage.setItem(
       "sre-agent-plugin-installer.analytics-consent",
       JSON.stringify({
-        version: 2,
+        version: 3,
         granted: true,
         decidedAt: "2026-01-01T00:00:00.000Z",
       })
@@ -404,7 +404,7 @@ describe("consent gating", () => {
     sessionStorage.setItem(
       "sre-agent-plugin-installer.analytics-consent",
       JSON.stringify({
-        version: 2,
+        version: 3,
         reset: true,
         decidedAt: "2026-01-02T00:00:00.000Z",
       })
@@ -566,7 +566,7 @@ describe("regional consent", () => {
     const localStorage = createStorage();
     localStorage.setItem(
       "sre-agent-plugin-installer.analytics-consent",
-      JSON.stringify({ version: 2, granted: false })
+      JSON.stringify({ version: 3, granted: false })
     );
 
     const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
@@ -608,7 +608,7 @@ describe("regional consent", () => {
     const sessionStorage = createStorage();
     sessionStorage.setItem(
       "sre-agent-plugin-installer.analytics-consent",
-      JSON.stringify({ version: 2, granted: false })
+      JSON.stringify({ version: 3, granted: false })
     );
 
     const { telemetry } = loadTelemetry(VALID_CONNECTION_STRING, {
@@ -674,7 +674,7 @@ describe("regional consent", () => {
     backingStorage.setItem(
       "sre-agent-plugin-installer.analytics-consent",
       JSON.stringify({
-        version: 2,
+        version: 3,
         granted: true,
         decidedAt: "2026-01-01T00:00:00.000Z",
       })
@@ -760,7 +760,7 @@ describe("regional consent", () => {
           backingStorage.setItem(
             "sre-agent-plugin-installer.analytics-consent",
             JSON.stringify({
-              version: 2,
+              version: 3,
               granted: false,
               decidedAt: "2026-01-01T00:00:00.000Z",
             })
