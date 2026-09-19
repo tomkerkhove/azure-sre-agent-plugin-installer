@@ -529,6 +529,26 @@ pre.output {
   font-weight: 600;
 }
 
+.choice-group {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 16px 0;
+  padding: 12px;
+}
+
+.choice-group legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+.choice-group label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .empty-state {
   text-align: center;
   color: var(--muted);
