@@ -99,6 +99,10 @@ async function openPortalInstallOption(page) {
   await page.locator("#portal-install-option summary").click();
 }
 
+async function openApiCenterInstallOption(page) {
+  await page.locator("#api-center-install-option summary").click();
+}
+
 test.describe("Privacy consent", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("https://api.github.com/**", async (route) => {
@@ -267,6 +271,35 @@ test.describe("Privacy consent", () => {
     expect(metric.data.baseData.metrics[0].name).toBe("PluginInstalls");
     expect(metric.data.baseData.metrics[0].value).toBe(1);
     expect(metric.data.baseData.properties.repository).toBe("owner/repo");
+  });
+
+  test("reports API Center source copying with the repository name", async ({ page, context }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+
+    await page.goto("/install.html?repo=owner/repo&path=plugins/my-plugin");
+    await page.locator("#consent-accept").click();
+    await openApiCenterInstallOption(page);
+    await page.locator("#copy-api-center-source-btn").click();
+
+    await expect
+      .poll(
+        () =>
+          envelopes(ingestionRequests).find(
+            (envelope) =>
+              envelope.data.baseType === "EventData" &&
+              envelope.data.baseData.name === "ApiCenterSourceCopied"
+          ),
+        { timeout: 5000 }
+      )
+      .toBeTruthy();
+
+    const event = envelopes(ingestionRequests).find(
+      (envelope) => envelope.data.baseData.name === "ApiCenterSourceCopied"
+    );
+    expect(event.data.baseData.properties.repository).toBe("owner/repo");
+    expect(event.data.baseData.properties.hasPath).toBe("true");
   });
 
   test("reports error categories without exception details", async ({ page }) => {
@@ -463,6 +496,32 @@ test.describe("Privacy consent", () => {
     expect(
       envelopes(ingestionRequests).some(
         (envelope) => envelope.data.baseType === "MetricData"
+      )
+    ).toBe(false);
+    await expect(page.locator("#toast")).not.toHaveClass(/visible/);
+  });
+
+  test("does not report API Center source copying when clipboard writing fails", async ({ page }) => {
+    const ingestionRequests = [];
+    await enableTelemetry(page, ingestionRequests);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: () => Promise.reject(new Error("Clipboard unavailable")),
+        },
+      });
+    });
+
+    await page.goto("/install.html?repo=owner/repo");
+    await page.locator("#consent-accept").click();
+    await openApiCenterInstallOption(page);
+    await page.locator("#copy-api-center-source-btn").click();
+    await page.waitForTimeout(250);
+
+    expect(
+      envelopes(ingestionRequests).some(
+        (envelope) => envelope.data.baseData.name === "ApiCenterSourceCopied"
       )
     ).toBe(false);
     await expect(page.locator("#toast")).not.toHaveClass(/visible/);

@@ -45,7 +45,8 @@ When analytics are enabled, only these fields are collected:
 
 * A page view with the scenario (`plugin-install` or `badge-generator`).
 * Events describing what happened: `BadgeGenerated`, `BadgeMarkdownCopied`,
-  `BadgeGenerationFailed`, `PluginRepositoryCopied`, `AzureSreAgentOpened`.
+  `BadgeGenerationFailed`, `PluginRepositoryCopied`, `AzureSreAgentOpened`,
+  `ApiCenterSourceCopied`, `AzureApiCenterOpened`.
 * The public GitHub repository (`owner/repo`) of the plugin being installed and
   whether a sub-path was used.
 * A `PluginInstalls` custom metric, with that public repository name as a
