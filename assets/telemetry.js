@@ -18,7 +18,7 @@
   var CONSENT_STORAGE_PROBE_KEY =
     "sre-agent-plugin-installer.analytics-consent-probe";
   var CONSENT_CHANNEL_NAME = "sre-agent-plugin-installer.analytics-consent-sync";
-  var CONSENT_VERSION = 2;
+  var CONSENT_VERSION = 3;
   var MAX_PROPERTIES = 12;
   var MAX_PROPERTY_LENGTH = 256;
   var NON_EUROPEAN_TIME_ZONE_PREFIXES = [

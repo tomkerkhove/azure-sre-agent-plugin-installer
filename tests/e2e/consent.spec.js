@@ -693,7 +693,7 @@ test.describe("Privacy consent", () => {
       sessionStorage.setItem(
         "sre-agent-plugin-installer.analytics-consent",
         JSON.stringify({
-          version: 2,
+          version: 3,
           granted: false,
           decidedAt: new Date().toISOString(),
         })
@@ -716,7 +716,7 @@ test.describe("Privacy consent", () => {
         ),
       }))
     ).toEqual({
-      local: expect.objectContaining({ version: 2, reset: true }),
+      local: expect.objectContaining({ version: 3, reset: true }),
       session: null,
     });
   });

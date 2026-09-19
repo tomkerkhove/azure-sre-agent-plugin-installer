@@ -1210,7 +1210,11 @@ function renderInstallCard(repo, path) {
       </p>
       <ol class="steps">
         <li>Open your <strong>Azure API Center</strong> resource in the Azure portal.</li>
-        <li>Go to <strong>Inventory &gt; Assets</strong>, then choose <strong>Register an asset &gt; API</strong>.</li>
+        <li>
+          Go to <strong>Inventory &gt; Assets</strong>, then choose
+          <strong>Register an asset &gt; API</strong> for an API plugin or
+          <strong>Register an asset &gt; MCP server</strong> for an MCP plugin.
+        </li>
         <li>Use the plugin source below as a documentation link or metadata value.</li>
         <li>If the plugin exposes an OpenAPI definition or MCP server endpoint, add it to the API Center asset.</li>
       </ol>

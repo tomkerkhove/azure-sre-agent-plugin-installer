@@ -156,6 +156,7 @@ test.describe("Install to Azure SRE Agent site", () => {
     await expect(option).toBeVisible();
     await expect(option).toContainText("Inventory > Assets");
     await expect(option).toContainText("Register an asset > API");
+    await expect(option).toContainText("Register an asset > MCP server");
     await expect(page.locator("#api-center-source-value")).toHaveValue(
       "https://github.com/owner/repo"
     );
